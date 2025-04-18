@@ -178,7 +178,7 @@ export default function Home() {
     }
   }
 
-  // Kural uygula
+
   // Kural uygula
   const handleApplyRule = async (listName, labelType) => {
     if (!selectedRuleSet) {
@@ -283,7 +283,6 @@ export default function Home() {
         setLoading(true)
         const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
         setManipulatedLists(data.applyedLists)
-        showFeedback("success", "Manipüle edilmiş listeler yüklendi", { operation: "Liste yükleme" })
       } catch (error) {
         showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
       } finally {
