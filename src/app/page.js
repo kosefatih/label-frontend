@@ -763,37 +763,53 @@ export default function Home() {
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
-                                <Button size="sm" variant="secondary">
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  onClick={() => handleGetManipulatedLabels(group.listName)}
+                                >
                                   Listele
                                 </Button>
                               }
                               onConfirm={() => handleGetManipulatedLabels(group.listName)}
                               confirmText="Listeyi Yenile"
+                              closeOnConfirm={false} // Dialog'un kapanmaması için
                             >
-                              {manipulatedLists.length > 0 ? (
-                                <ul className="space-y-2">
+                              {loading ? (
+                                <div className="flex justify-center py-8">
+                                  <p>Yükleniyor...</p>
+                                </div>
+                              ) : manipulatedLists.length > 0 ? (
+                                <div className="space-y-3">
                                   {manipulatedLists.map((list, index) => (
-                                    <li key={index} className="p-3 border rounded flex justify-between items-center">
-                                      <div>
-                                        <p className="font-medium">{list.applyedListName}</p>
-                                        <p className="text-sm text-gray-600">
+                                    <div 
+                                      key={index} 
+                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{list.applyedListName}</p>
+                                        <p className="text-sm text-gray-600 truncate">
                                           {list.labelType} - {list.listRowCount} kayıt
                                         </p>
                                       </div>
                                       <LoadingButton
                                         size="sm"
                                         isLoading={loading}
-                                        onClick={() =>
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Dialog'un kapanmasını engellemek için
                                           handleExportLabels(group.listName, list.labelType, list.applyedListName)
-                                        }
+                                        }}
+                                        className="ml-2 shrink-0"
                                       >
                                         Çıktı Al
                                       </LoadingButton>
-                                    </li>
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
                               ) : (
-                                <p>Manipüle edilmiş liste bulunamadı</p>
+                                <div className="py-4 text-center text-gray-500">
+                                  <p>Manipüle edilmiş liste bulunamadı</p>
+                                </div>
                               )}
                             </FeedbackDialog>
                           </>
