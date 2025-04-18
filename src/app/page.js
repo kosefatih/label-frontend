@@ -50,7 +50,7 @@ export default function Home() {
     klemensBMKExportDetailSettings: {},
     deviceBMKExportSettings: {
       fileName: "",
-      repeatCount: 1,
+      repeatCount: 0,
     },
   })
   const [newCustomer, setNewCustomer] = useState({
@@ -669,41 +669,43 @@ export default function Home() {
                             </FeedbackDialog>
 
                             <FeedbackDialog
-                              title="Manipüle Edilmiş Listeler"
-                              trigger={
-                                <Button size="sm" variant="secondary">
-                                  Listele
-                                </Button>
-                              }
-                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
-                              confirmText="Listeyi Yenile"
-                            >
-                              {manipulatedLists.length > 0 ? (
-                                <ul className="space-y-2">
-                                  {manipulatedLists.map((list, index) => (
-                                    <li key={index} className="p-3 border rounded flex justify-between items-center">
-                                      <div>
-                                        <p className="font-medium">{list.applyedListName}</p>
-                                        <p className="text-sm text-gray-600">
-                                          {list.labelType} - {list.listRowCount} kayıt
-                                        </p>
-                                      </div>
-                                      <LoadingButton
-                                        size="sm"
-                                        isLoading={loading}
-                                        onClick={() =>
-                                          handleExportLabels(group.listName, list.labelType, list.applyedListName)
-                                        }
-                                      >
-                                        Çıktı Al
-                                      </LoadingButton>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p>Manipüle edilmiş liste bulunamadı</p>
-                              )}
-                            </FeedbackDialog>
+                            title="Manipüle Edilmiş Listeler"
+                            trigger={
+                              <Button 
+                                size="sm" 
+                                variant="secondary"
+                                onClick={() => handleGetManipulatedLabels(group.listName)}
+                              >
+                                Listele
+                              </Button>
+                            }
+                          >
+                            {manipulatedLists.length > 0 ? (
+                              <ul className="space-y-2">
+                                {manipulatedLists.map((list, index) => (
+                                  <li key={index} className="p-3 border rounded flex justify-between items-center">
+                                    <div>
+                                      <p className="font-medium">{list.applyedListName}</p>
+                                      <p className="text-sm text-gray-600">
+                                        {list.labelType} - {list.listRowCount} kayıt
+                                      </p>
+                                    </div>
+                                    <LoadingButton
+                                      size="sm"
+                                      isLoading={loading}
+                                      onClick={() =>
+                                        handleExportLabels(group.listName, list.labelType, list.applyedListName)
+                                      }
+                                    >
+                                      Çıktı Al
+                                    </LoadingButton>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p>Manipüle edilmiş liste bulunamadı</p>
+                            )}
+                          </FeedbackDialog>
                           </>
                         }
                       />
