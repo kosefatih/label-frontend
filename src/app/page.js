@@ -304,18 +304,19 @@ export default function Home() {
   }
 
   // Excel dosyasını indir
-  const handleExportLabels = async (listName, labelType, applyedListName) => {
+  const handleExportLabels = async (listName, labelType, applyedListName, customSettings = null) => {
     try {
-      setLoading(true)
-      // Dosya adını ayarla
-      const settings = {
+      setLoading(true);
+      
+      // Özel ayarlar varsa onları kullan, yoksa mevcut exportSettings'i kullan
+      const settings = customSettings || {
         ...exportSettings,
         [`${labelType}ExportSettings`]: {
           ...exportSettings[`${labelType}ExportSettings`],
           fileName: applyedListName,
         },
-      }
-
+      };
+  
       const response = await exportLabelList(
         selectedCustomer.code,
         selectedProject.code,
@@ -323,25 +324,25 @@ export default function Home() {
         listName,
         labelType,
         applyedListName,
-        settings,
-      )
-
+        settings
+      );
+  
       // Blob'dan dosya oluştur ve indir
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement("a")
-      link.href = url
-      link.setAttribute("download", `${applyedListName}.xlsx`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-
-      showFeedback("success", "Excel dosyası indirildi", { operation: "Dosya indirme" })
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `${applyedListName}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+  
+      showFeedback("success", "Excel dosyası indirildi", { operation: "Dosya indirme" });
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya indirme" })
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya indirme" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   
 
@@ -671,11 +672,7 @@ export default function Home() {
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
-                                <Button 
-                                  size="sm" 
-                                  variant="secondary"
-                                  onClick={() => handleGetManipulatedLabels(group.listName)}
-                                >
+                                <Button size="sm" variant="secondary">
                                   Listele
                                 </Button>
                               }
@@ -691,16 +688,11 @@ export default function Home() {
                                 <div className="space-y-3">
                                   {manipulatedLists.map((list, index) => {
                                     const [repeatCount, setRepeatCount] = useState(
-                                      list.labelType === "DeviceBMK" ? 0 : 
-                                      list.labelType === "AderBMK" ? 4 : 
-                                      1
+                                      list.labelType === "DeviceBMK" ? 0 : 1
                                     );
 
                                     return (
-                                      <div 
-                                        key={index} 
-                                        className="p-3 border rounded-lg flex flex-col gap-3 hover:bg-gray-50 transition-colors"
-                                      >
+                                      <div key={index} className="p-3 border rounded-lg flex flex-col gap-3">
                                         <div className="flex justify-between items-center">
                                           <div className="flex-1 min-w-0">
                                             <p className="font-medium truncate">{list.applyedListName}</p>
@@ -730,25 +722,17 @@ export default function Home() {
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             const exportSettings = {
-                                              aderBMKExportDetailSettings: {
-                                                fileName: list.applyedListName,
-                                                repeatCount: 4,
-                                                labelRowCount: 12,
-                                                exportType: "HeadEnd",
-                                                hasIdentifierColumn: true,
-                                                spaceAvaliable: false,
-                                              },
-                                              klemensBMKExportDetailSettings: {},
+                                              ...exportSettings,
                                               deviceBMKExportSettings: {
                                                 fileName: list.applyedListName,
-                                                repeatCount: list.labelType === "DeviceBMK" ? repeatCount : 0,
+                                                repeatCount: repeatCount,
                                               },
                                             };
                                             handleExportLabels(
-                                              group.listName, 
-                                              list.labelType, 
+                                              group.listName,
+                                              list.labelType,
                                               list.applyedListName,
-                                              exportSettings // Yeni export ayarlarını gönder
+                                              exportSettings
                                             );
                                           }}
                                           className="self-end"
@@ -760,9 +744,7 @@ export default function Home() {
                                   })}
                                 </div>
                               ) : (
-                                <div className="py-4 text-center text-gray-500">
-                                  <p>Manipüle edilmiş liste bulunamadı</p>
-                                </div>
+                                <p>Manipüle edilmiş liste bulunamadı</p>
                               )}
                             </FeedbackDialog>
                           </>
