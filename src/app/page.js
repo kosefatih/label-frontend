@@ -755,7 +755,7 @@ export default function Home() {
         {/* --- Excel Yükleme Formu --- */}
         {selectedPano && (
           <div className="mt-8">
-            <h2 className="text-2xl font-semibold mb-4">Excel'den Etiket Yükle</h2>
+            <h2 className="text-2xl font-semibold mb-4">Excelden Etiket Yükle</h2>
             <UploadForm
               customerCode={selectedCustomer.code}
               projectCode={selectedProject.code}
