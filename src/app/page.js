@@ -38,6 +38,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [manipulatedLists, setManipulatedLists] = useState([])
   const [selectedManipulatedList, setSelectedManipulatedList] = useState(null)
+  const [repeatCounts, setRepeatCounts] = useState({});
   const [exportSettings, setExportSettings] = useState({
     aderBMKExportDetailSettings: {
       fileName: "",
@@ -686,62 +687,59 @@ export default function Home() {
                                 </div>
                               ) : manipulatedLists.length > 0 ? (
                                 <div className="space-y-3">
-                                  {manipulatedLists.map((list, index) => {
-                                    const [repeatCount, setRepeatCount] = useState(
-                                      list.labelType === "DeviceBMK" ? 0 : 1
-                                    );
-
-                                    return (
-                                      <div key={index} className="p-3 border rounded-lg flex flex-col gap-3">
-                                        <div className="flex justify-between items-center">
-                                          <div className="flex-1 min-w-0">
-                                            <p className="font-medium truncate">{list.applyedListName}</p>
-                                            <p className="text-sm text-gray-600 truncate">
-                                              {list.labelType} - {list.listRowCount} kayıt
-                                            </p>
-                                          </div>
+                                  {manipulatedLists.map((list, index) => (
+                                    <div key={index} className="p-3 border rounded-lg flex flex-col gap-3">
+                                      <div className="flex justify-between items-center">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium truncate">{list.applyedListName}</p>
+                                          <p className="text-sm text-gray-600 truncate">
+                                            {list.labelType} - {list.listRowCount} kayıt
+                                          </p>
                                         </div>
-
-                                        {list.labelType === "DeviceBMK" && (
-                                          <div className="flex items-center gap-2">
-                                            <Label htmlFor={`repeatCount-${index}`}>Tekrar Sayısı:</Label>
-                                            <Input
-                                              id={`repeatCount-${index}`}
-                                              type="number"
-                                              min="0"
-                                              value={repeatCount}
-                                              onChange={(e) => setRepeatCount(Number(e.target.value))}
-                                              className="w-20"
-                                            />
-                                          </div>
-                                        )}
-
-                                        <LoadingButton
-                                          size="sm"
-                                          isLoading={loading}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const exportSettings = {
-                                              ...exportSettings,
-                                              deviceBMKExportSettings: {
-                                                fileName: list.applyedListName,
-                                                repeatCount: repeatCount,
-                                              },
-                                            };
-                                            handleExportLabels(
-                                              group.listName,
-                                              list.labelType,
-                                              list.applyedListName,
-                                              exportSettings
-                                            );
-                                          }}
-                                          className="self-end"
-                                        >
-                                          Çıktı Al
-                                        </LoadingButton>
                                       </div>
-                                    );
-                                  })}
+                              
+                                      {list.labelType === "DeviceBMK" && (
+                                        <div className="flex items-center gap-2">
+                                          <Label htmlFor={`repeatCount-${index}`}>Tekrar Sayısı:</Label>
+                                          <Input
+                                            id={`repeatCount-${index}`}
+                                            type="number"
+                                            min="0"
+                                            value={repeatCounts[index] || 0}
+                                            onChange={(e) => setRepeatCounts({
+                                              ...repeatCounts,
+                                              [index]: Number(e.target.value)
+                                            })}
+                                            className="w-20"
+                                          />
+                                        </div>
+                                      )}
+                              
+                                      <LoadingButton
+                                        size="sm"
+                                        isLoading={loading}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const exportSettings = {
+                                            ...exportSettings,
+                                            deviceBMKExportSettings: {
+                                              fileName: list.applyedListName,
+                                              repeatCount: list.labelType === "DeviceBMK" ? (repeatCounts[index] || 0) : 0,
+                                            },
+                                          };
+                                          handleExportLabels(
+                                            group.listName,
+                                            list.labelType,
+                                            list.applyedListName,
+                                            exportSettings
+                                          );
+                                        }}
+                                        className="self-end"
+                                      >
+                                        Çıktı Al
+                                      </LoadingButton>
+                                    </div>
+                                  ))}
                                 </div>
                               ) : (
                                 <p>Manipüle edilmiş liste bulunamadı</p>
