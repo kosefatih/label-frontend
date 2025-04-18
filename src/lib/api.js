@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://localhost:7000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export const getCustomers = async () => {
   const res = await axios.get(`${API_URL}/customers`);
