@@ -669,43 +669,102 @@ export default function Home() {
                             </FeedbackDialog>
 
                             <FeedbackDialog
-                            title="Manipüle Edilmiş Listeler"
-                            trigger={
-                              <Button 
-                                size="sm" 
-                                variant="secondary"
-                                onClick={() => handleGetManipulatedLabels(group.listName)}
-                              >
-                                Listele
-                              </Button>
-                            }
-                          >
-                            {manipulatedLists.length > 0 ? (
-                              <ul className="space-y-2">
-                                {manipulatedLists.map((list, index) => (
-                                  <li key={index} className="p-3 border rounded flex justify-between items-center">
-                                    <div>
-                                      <p className="font-medium">{list.applyedListName}</p>
-                                      <p className="text-sm text-gray-600">
-                                        {list.labelType} - {list.listRowCount} kayıt
-                                      </p>
-                                    </div>
-                                    <LoadingButton
-                                      size="sm"
-                                      isLoading={loading}
-                                      onClick={() =>
-                                        handleExportLabels(group.listName, list.labelType, list.applyedListName)
-                                      }
-                                    >
-                                      Çıktı Al
-                                    </LoadingButton>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p>Manipüle edilmiş liste bulunamadı</p>
-                            )}
-                          </FeedbackDialog>
+                              title="Manipüle Edilmiş Listeler"
+                              trigger={
+                                <Button 
+                                  size="sm" 
+                                  variant="secondary"
+                                  onClick={() => handleGetManipulatedLabels(group.listName)}
+                                >
+                                  Listele
+                                </Button>
+                              }
+                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                              confirmText="Listeyi Yenile"
+                              closeOnConfirm={false}
+                            >
+                              {loading ? (
+                                <div className="flex justify-center py-8">
+                                  <p>Yükleniyor...</p>
+                                </div>
+                              ) : manipulatedLists.length > 0 ? (
+                                <div className="space-y-3">
+                                  {manipulatedLists.map((list, index) => {
+                                    const [repeatCount, setRepeatCount] = useState(
+                                      list.labelType === "DeviceBMK" ? 0 : 
+                                      list.labelType === "AderBMK" ? 4 : 
+                                      1
+                                    );
+
+                                    return (
+                                      <div 
+                                        key={index} 
+                                        className="p-3 border rounded-lg flex flex-col gap-3 hover:bg-gray-50 transition-colors"
+                                      >
+                                        <div className="flex justify-between items-center">
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{list.applyedListName}</p>
+                                            <p className="text-sm text-gray-600 truncate">
+                                              {list.labelType} - {list.listRowCount} kayıt
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        {list.labelType === "DeviceBMK" && (
+                                          <div className="flex items-center gap-2">
+                                            <Label htmlFor={`repeatCount-${index}`}>Tekrar Sayısı:</Label>
+                                            <Input
+                                              id={`repeatCount-${index}`}
+                                              type="number"
+                                              min="0"
+                                              value={repeatCount}
+                                              onChange={(e) => setRepeatCount(Number(e.target.value))}
+                                              className="w-20"
+                                            />
+                                          </div>
+                                        )}
+
+                                        <LoadingButton
+                                          size="sm"
+                                          isLoading={loading}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const exportSettings = {
+                                              aderBMKExportDetailSettings: {
+                                                fileName: list.applyedListName,
+                                                repeatCount: 4,
+                                                labelRowCount: 12,
+                                                exportType: "HeadEnd",
+                                                hasIdentifierColumn: true,
+                                                spaceAvaliable: false,
+                                              },
+                                              klemensBMKExportDetailSettings: {},
+                                              deviceBMKExportSettings: {
+                                                fileName: list.applyedListName,
+                                                repeatCount: list.labelType === "DeviceBMK" ? repeatCount : 0,
+                                              },
+                                            };
+                                            handleExportLabels(
+                                              group.listName, 
+                                              list.labelType, 
+                                              list.applyedListName,
+                                              exportSettings // Yeni export ayarlarını gönder
+                                            );
+                                          }}
+                                          className="self-end"
+                                        >
+                                          Çıktı Al
+                                        </LoadingButton>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="py-4 text-center text-gray-500">
+                                  <p>Manipüle edilmiş liste bulunamadı</p>
+                                </div>
+                              )}
+                            </FeedbackDialog>
                           </>
                         }
                       />
