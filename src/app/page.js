@@ -72,6 +72,36 @@ export default function Home() {
     description: "",
   })
 
+
+  const parseLabelError = (error) => {
+    if (!error.response?.data) return null;
+    
+    try {
+      // Response'un string olma durumuna karşı kontrol
+      const errorData = typeof error.response.data === 'string' 
+        ? JSON.parse(error.response.data) 
+        : error.response.data;
+  
+      const errorParts = errorData.Message.split('&-&');
+      
+      return {
+        status: errorData.Status,
+        mainMessage: errorParts[0].trim(),
+        module: errorParts[1]?.replace('Hatanın oluştuğu modül:', '').trim(),
+        repository: errorParts[2]?.replace('İstek gönderilen repository:', '').trim(),
+        exceptionType: errorData.Data,
+        products: errorParts[3]?.replace('Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-', '')
+          .split('\n')
+          .filter(p => p.trim())
+      };
+    } catch (e) {
+      console.error('Error parsing error response:', e);
+      return null;
+    }
+  };
+
+
+
   // Müşterileri yükle
   const loadCustomers = async () => {
     try {
@@ -128,9 +158,9 @@ export default function Home() {
       setLoading(true)
       setSelectedPano(pano)
       if (!selectedCustomer || !selectedProject) return
-      const data = await getLabels(selectedCustomer.code, selectedProject.code, pano.name)
+      const data = await getLabels(selectedCustomer.code, selectedProject.code, pano.code)
       setLabels(data)
-      showFeedback("success", `${pano.name} panosunun etiketleri yüklendi`, { operation: "Veri yükleme" })
+      showFeedback("success", `${pano.code} panosunun etiketleri yüklendi`, { operation: "Veri yükleme" })
     } catch (error) {
       showFeedback("error", error.response?.data?.message || error.message, { operation: "Veri yükleme" })
     } finally {
@@ -149,36 +179,122 @@ export default function Home() {
   }
 
   // Kural uygula
+  // Kural uygula
   const handleApplyRule = async (listName, labelType) => {
     if (!selectedRuleSet) {
-      showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" })
-      return
+      showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" });
+      return;
     }
-
+  
     try {
-      setLoading(true)
+      setLoading(true);
       const result = await applyRuleToLabel(
         selectedCustomer.code,
         selectedProject.code,
-        selectedPano.name,
+        selectedPano.code,
         listName,
         selectedRuleSet.id,
         false,
-      )
-      showFeedback("success", result, { operation: "Kural uygulama" })
-      // Etiketleri yeniden yükle
-      await loadLabels(selectedPano)
+      );
+      showFeedback("success", result, { operation: "Kural uygulama" });
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Kural uygulama" })
+      // Hata response'unu parse et
+      let errorMessage = error.message;
+      let errorDetails = null;
+      let productList = null;
+  
+      // Backend'den gelen JSON formatındaki hata
+      if (error.response?.data) {
+        try {
+          const errorData = typeof error.response.data === 'string' 
+            ? JSON.parse(error.response.data) 
+            : error.response.data;
+  
+          // Hata mesajını parçalara ayır
+          const messageParts = errorData.Message?.split('&-&') || [];
+          
+          errorDetails = {
+            status: errorData.Status || error.response.status,
+            mainMessage: messageParts[0]?.trim() || errorData.Message,
+            module: messageParts[1]?.replace('Hatanın oluştuğu modül:', '').replace('The module where the error occurred:', '').trim(),
+            repository: messageParts[2]?.replace('İstek gönderilen repository:', '').replace('The repository to which the request was sent:', '').trim(),
+            exceptionType: errorData.Data,
+          };
+  
+          // Ürün listesini çıkar
+          if (messageParts[3]) {
+            productList = messageParts[3]
+              .replace('Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-', '')
+              .replace('List of devices without defined category(s):-ProductCodes:-', '')
+              .split('\n')
+              .filter(p => p.trim());
+          }
+  
+          errorMessage = errorDetails.mainMessage;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+        }
+      }
+  
+      // Console'a detaylı loglama
+      console.groupCollapsed('%cAPI Error Details', 'color: red; font-weight: bold;');
+      console.error('Endpoint:', `${error.config?.method?.toUpperCase()} ${error.config?.url}`);
+      console.error('Status:', error.response?.status || 'No response');
+      console.error('Message:', errorMessage);
+      
+      if (errorDetails) {
+        console.group('Error Details');
+        console.log('Module:', errorDetails.module);
+        console.log('Repository:', errorDetails.repository);
+        console.log('Exception:', errorDetails.exceptionType);
+        console.groupEnd();
+      }
+  
+      if (productList?.length) {
+        console.group('%cInvalid Products (' + productList.length + ')', 'color: orange;');
+        productList.forEach((product, index) => {
+          console.log(`%c${index + 1}. ${product}`, 'color: #333;');
+        });
+        console.groupEnd();
+      }
+  
+      console.log('Full error object:', error);
+      console.groupEnd();
+  
+      // Kullanıcıya gösterilecek feedback
+      showFeedback("error", errorMessage, {
+        operation: "Kural uygulama",
+        errorDetails: {
+          ...errorDetails,
+          products: productList,
+          technicalMessage: `Modül: ${errorDetails?.module || 'Bilinmiyor'}\nRepository: ${errorDetails?.repository || 'Bilinmiyor'}`,
+        },
+        showDetailsButton: true // Detayları göster butonu ekle
+      });
+  
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+    // Manipüle edilmiş listeleri getir
+    const handleGetManipulatedLabels = async (listName) => {
+      try {
+        setLoading(true)
+        const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
+        setManipulatedLists(data.applyedLists)
+        showFeedback("success", "Manipüle edilmiş listeler yüklendi", { operation: "Liste yükleme" })
+      } catch (error) {
+        showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
+      } finally {
+        setLoading(false)
+      }
+    }
 
   const handleListLabels = async (listName, labelType) => {
     try {
       setLoading(true)
-      const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.name, listName)
+      const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
       setManipulatedLists(data.applyedLists)
       showFeedback("success", "Manipüle edilmiş listeler yüklendi", { operation: "Liste yükleme" })
     } catch (error) {
@@ -204,7 +320,7 @@ export default function Home() {
       const response = await exportLabelList(
         selectedCustomer.code,
         selectedProject.code,
-        selectedPano.name,
+        selectedPano.code,
         listName,
         labelType,
         applyedListName,
@@ -223,6 +339,40 @@ export default function Home() {
       showFeedback("success", "Excel dosyası indirildi", { operation: "Dosya indirme" })
     } catch (error) {
       showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya indirme" })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  
+
+  // Kural uygula ve çıktı al
+  const handleApplyAndExport = async (listName, labelType) => {
+    if (!selectedRuleSet) {
+      showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" })
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Önce kuralı uygula
+      await applyRuleToLabel(
+        selectedCustomer.code,
+        selectedProject.code,
+        selectedPano.code,
+        listName,
+        selectedRuleSet.id,
+        false,
+      )
+      
+      // Sonra çıktıyı al
+      const applyedListName = `${listName}_${selectedRuleSet.name}`
+      await handleExportLabels(listName, labelType, applyedListName)
+      
+      showFeedback("success", "Etiketler başarıyla oluşturuldu ve indirildi", { operation: "Etiket oluşturma" })
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Etiket oluşturma" })
     } finally {
       setLoading(false)
     }
@@ -276,7 +426,7 @@ export default function Home() {
     try {
       setLoading(true)
       await createPano(selectedCustomer.code, selectedProject.code, newPano)
-      showFeedback("success", `${newPano.name} panosu oluşturuldu`, { operation: "Pano oluşturma" })
+      showFeedback("success", `${newPano.code} panosu oluşturuldu`, { operation: "Pano oluşturma" })
       await loadPanos(selectedProject)
       setNewPano({
         code: "",
@@ -353,7 +503,7 @@ export default function Home() {
       </div>
       <div>
         <Label>Ad</Label>
-        <Input value={newPano.name} onChange={(e) => setNewPano({ ...newPano, name: e.target.value })} />
+        <Input value={newPano.code} onChange={(e) => setNewPano({ ...newPano, name: e.target.value })} />
       </div>
       <div>
         <Label>Açıklama</Label>
@@ -459,7 +609,7 @@ export default function Home() {
               {panos.map((pano) => (
                 <UIListItem
                   key={pano.id}
-                  title={`${pano.name} (${pano.code})`}
+                  title={`${pano.code} (${pano.code})`}
                   subtitle={pano.description}
                   isSelected={selectedPano?.id === pano.id}
                   onClick={() => loadLabels(pano)}
@@ -492,26 +642,33 @@ export default function Home() {
                                 </Button>
                               }
                               onConfirm={() => handleApplyRule(group.listName, "AderBMK")}
+                              confirmText="Kuralı Uygula"
                             >
-                              <Select
-                                onValueChange={(value) =>
-                                  setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Kural seti seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {ruleSets
-                                    .filter((r) => r.labelType === "AderBMK")
-                                    .map((ruleSet) => (
-                                      <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
-                                        {ruleSet.name} ({ruleSet.ruleCount} kural)
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                  {group.listName} listesi için kural seti seçin
+                                </p>
+                                <Select
+                                  onValueChange={(value) =>
+                                    setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Kural seti seçin" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ruleSets
+                                      .filter((r) => r.labelType === "AderBMK")
+                                      .map((ruleSet) => (
+                                        <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
+                                          {ruleSet.name} ({ruleSet.ruleCount} kural)
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </FeedbackDialog>
+
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
@@ -519,7 +676,8 @@ export default function Home() {
                                   Listele
                                 </Button>
                               }
-                              onConfirm={() => handleListLabels(group.listName)}
+                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                              confirmText="Listeyi Yenile"
                             >
                               {manipulatedLists.length > 0 ? (
                                 <ul className="space-y-2">
@@ -538,7 +696,7 @@ export default function Home() {
                                           handleExportLabels(group.listName, list.labelType, list.applyedListName)
                                         }
                                       >
-                                        Dosyayı Kaydet
+                                        Çıktı Al
                                       </LoadingButton>
                                     </li>
                                   ))}
@@ -574,26 +732,33 @@ export default function Home() {
                                 </Button>
                               }
                               onConfirm={() => handleApplyRule(group.listName, "KlemensBMK")}
+                              confirmText="Kuralı Uygula"
                             >
-                              <Select
-                                onValueChange={(value) =>
-                                  setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Kural seti seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {ruleSets
-                                    .filter((r) => r.labelType === "KlemensBMK")
-                                    .map((ruleSet) => (
-                                      <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
-                                        {ruleSet.name} ({ruleSet.ruleCount} kural)
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                  {group.listName} listesi için kural seti seçin
+                                </p>
+                                <Select
+                                  onValueChange={(value) =>
+                                    setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Kural seti seçin" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ruleSets
+                                      .filter((r) => r.labelType === "KlemensBMK")
+                                      .map((ruleSet) => (
+                                        <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
+                                          {ruleSet.name} ({ruleSet.ruleCount} kural)
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </FeedbackDialog>
+
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
@@ -601,7 +766,8 @@ export default function Home() {
                                   Listele
                                 </Button>
                               }
-                              onConfirm={() => handleListLabels(group.listName)}
+                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                              confirmText="Listeyi Yenile"
                             >
                               {manipulatedLists.length > 0 ? (
                                 <ul className="space-y-2">
@@ -620,7 +786,7 @@ export default function Home() {
                                           handleExportLabels(group.listName, list.labelType, list.applyedListName)
                                         }
                                       >
-                                        Dosyayı Kaydet
+                                        Çıktı Al
                                       </LoadingButton>
                                     </li>
                                   ))}
@@ -656,26 +822,33 @@ export default function Home() {
                                 </Button>
                               }
                               onConfirm={() => handleApplyRule(group.listName, "DeviceBMK")}
+                              confirmText="Kuralı Uygula"
                             >
-                              <Select
-                                onValueChange={(value) =>
-                                  setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
-                                }
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Kural seti seçin" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {ruleSets
-                                    .filter((r) => r.labelType === "DeviceBMK")
-                                    .map((ruleSet) => (
-                                      <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
-                                        {ruleSet.name} ({ruleSet.ruleCount} kural)
-                                      </SelectItem>
-                                    ))}
-                                </SelectContent>
-                              </Select>
+                              <div className="space-y-4">
+                                <p className="text-sm text-gray-600">
+                                  {group.listName} listesi için kural seti seçin
+                                </p>
+                                <Select
+                                  onValueChange={(value) =>
+                                    setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Kural seti seçin" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ruleSets
+                                      .filter((r) => r.labelType === "DeviceBMK")
+                                      .map((ruleSet) => (
+                                        <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
+                                          {ruleSet.name} ({ruleSet.ruleCount} kural)
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </FeedbackDialog>
+
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
@@ -683,7 +856,8 @@ export default function Home() {
                                   Listele
                                 </Button>
                               }
-                              onConfirm={() => handleListLabels(group.listName)}
+                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                              confirmText="Listeyi Yenile"
                             >
                               {manipulatedLists.length > 0 ? (
                                 <ul className="space-y-2">
@@ -702,7 +876,7 @@ export default function Home() {
                                           handleExportLabels(group.listName, list.labelType, list.applyedListName)
                                         }
                                       >
-                                        Dosyayı Kaydet
+                                        Çıktı Al
                                       </LoadingButton>
                                     </li>
                                   ))}
@@ -730,7 +904,7 @@ export default function Home() {
           <UploadForm
             customerCode={selectedCustomer.code}
             projectCode={selectedProject.code}
-            panoName={selectedPano.name}
+            panoCode={selectedPano.code}
           />
         </div>
       )}

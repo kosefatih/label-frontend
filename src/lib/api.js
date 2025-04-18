@@ -17,13 +17,13 @@ export const getPanos = async (customerCode, projectCode) => {
   return res.data.data;
 };
 
-export const getLabels = async (customerCode, projectCode, panoName) => {
-  const res = await axios.get(`${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoName}/labels`);
+export const getLabels = async (customerCode, projectCode, panoCode) => {
+  const res = await axios.get(`${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels`);
   return res.data.data;
 };
 
 // lib/api.js
-export const uploadExcel = async (person, customerCode, projectCode, panoName, file, descModel) => {
+export const uploadExcel = async (person, customerCode, projectCode, panoCode, file, descModel) => {
   const formData = new FormData();
   
   // Dosya ve temel bilgiler
@@ -31,14 +31,14 @@ export const uploadExcel = async (person, customerCode, projectCode, panoName, f
   formData.append('person', person);
   formData.append('customerName', customerCode);
   formData.append('projectName', projectCode);
-  formData.append('panoName', panoName);
+  formData.append('panoCode', panoCode);
   
   // Complex modeli JSON olarak ekle
   formData.append('columnInfo', JSON.stringify(descModel));
 
   try {
     const response = await axios.post(
-      `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoName}/labels`,
+      `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels`,
       formData,
       {
         headers: {
@@ -59,9 +59,9 @@ export const getRuleSets = async () => {
   return res.data.data;
 };
 
-export const applyRuleToLabel = async (customerCode, projectCode, panoName, listName, ruleSetId, ignoreException) => {
+export const applyRuleToLabel = async (customerCode, projectCode, panoCode, listName, ruleSetId, ignoreException) => {
   const res = await axios.post(
-    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoName}/labels/${listName}/`,
+    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}/`,
     null,
     {
       params: {
@@ -77,9 +77,9 @@ export const applyRuleToLabel = async (customerCode, projectCode, panoName, list
 };
 
 // Manipüle edilmiş listeleri getir
-export const getManipulatedLabels = async (customerCode, projectCode, panoName, listName) => {
+export const getManipulatedLabels = async (customerCode, projectCode, panoCode, listName) => {
   const res = await axios.get(
-    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoName}/labels/${listName}/manipulated`,
+    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}/manipulated`,
     {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -90,9 +90,9 @@ export const getManipulatedLabels = async (customerCode, projectCode, panoName, 
 };
 
 // Excel dosyasını export et
-export const exportLabelList = async (customerCode, projectCode, panoName, listName, labelType, applyedListName, settings) => {
+export const exportLabelList = async (customerCode, projectCode, panoCode, listName, labelType, applyedListName, settings) => {
   const res = await axios.post(
-    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoName}/labels/${listName}/export/${labelType}/${applyedListName}`,
+    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}/export/${labelType}/${applyedListName}`,
     settings,
     {
       headers: {

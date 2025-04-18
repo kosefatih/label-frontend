@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { showFeedback } from "@/lib/feedback"
 import { LoadingButton } from "./loading-button"
+import * as XLSX from "xlsx"
 
-const UploadForm = ({ customerCode, projectCode, panoName }) => {
+const UploadForm = ({ customerCode, projectCode, panoCode }) => {
   // Form state
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [availableSheets, setAvailableSheets] = useState([])
   const [formValues, setFormValues] = useState({
     listName: "",
     sheetName: "",
@@ -34,6 +36,33 @@ const UploadForm = ({ customerCode, projectCode, panoName }) => {
     deviceMerged: 2,
     deviceProduct: 4,
   })
+
+
+    // Handle file selection and read sheet names
+    const handleFileChange = async (e) => {
+      const selectedFile = e.target.files[0]
+      if (!selectedFile) return
+  
+      setFile(selectedFile)
+  
+      try {
+        const data = await selectedFile.arrayBuffer()
+        const workbook = XLSX.read(data)
+        const sheets = workbook.SheetNames
+        setAvailableSheets(sheets)
+        
+        // Otomatik olarak ilk sheet'i seç
+        if (sheets.length > 0) {
+          setFormValues(prev => ({
+            ...prev,
+            sheetName: sheets[0]
+          }))
+        }
+      } catch (error) {
+        console.error("Excel dosyası okunurken hata:", error)
+        showFeedback("error", "Excel dosyası okunurken hata oluştu", { operation: "Dosya okuma" })
+      }
+    }
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -131,7 +160,7 @@ const UploadForm = ({ customerCode, projectCode, panoName }) => {
       const descModel = buildDescModel()
       const person = localStorage.getItem("userId")
 
-      await uploadExcel(person, customerCode, projectCode, panoName, file, descModel)
+      await uploadExcel(person, customerCode, projectCode, panoCode, file, descModel)
 
       showFeedback("success", "Dosya başarıyla yüklendi!", { operation: "Dosya yükleme" })
 
@@ -154,17 +183,56 @@ const UploadForm = ({ customerCode, projectCode, panoName }) => {
   }
 
   // Error handling
+  // Enhanced error handling
   const handleError = (error) => {
-    console.error("Yükleme hatası:", error)
+    console.error("Yükleme hatası detayları:", {
+      message: error.message,
+      response: error.response,
+      stack: error.stack,
+      config: error.config
+    })
 
-    if (error.response?.data?.message?.includes("listAlreadyExistMsg")) {
-      showFeedback("error", "Bu liste adı zaten mevcut!", { operation: "Dosya yükleme" })
-    } else if (error.response?.status === 413) {
-      showFeedback("error", "Dosya boyutu çok büyük!", { operation: "Dosya yükleme" })
-    } else if (error.response?.status === 401) {
-      showFeedback("error", "Yetkiniz yok, lütfen tekrar giriş yapın", { operation: "Dosya yükleme" })
+    if (error.response) {
+      const { status, data } = error.response
+      
+      if (status === 413) {
+        showFeedback("error", "Dosya boyutu çok büyük! Maksimum 10MB destekleniyor.", { 
+          operation: "Dosya yükleme",
+          details: data 
+        })
+      } else if (status === 401) {
+        showFeedback("error", "Yetkiniz yok, lütfen tekrar giriş yapın", { 
+          operation: "Dosya yükleme",
+          details: data 
+        })
+      } else if (data?.message?.includes("listAlreadyExistMsg")) {
+        showFeedback("error", "Bu liste adı zaten mevcut! Lütfen farklı bir liste adı deneyin.", { 
+          operation: "Dosya yükleme",
+          details: data 
+        })
+      } else if (data?.errors) {
+        // Handle validation errors
+        const errorMessages = Object.values(data.errors).join("\n")
+        showFeedback("error", `Doğrulama hataları:\n${errorMessages}`, { 
+          operation: "Dosya yükleme",
+          details: data 
+        })
+      } else {
+        showFeedback("error", data?.message || "Beklenmeyen bir hata oluştu", { 
+          operation: "Dosya yükleme",
+          details: data 
+        })
+      }
+    } else if (error.request) {
+      showFeedback("error", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.", { 
+        operation: "Dosya yükleme",
+        details: error.request 
+      })
     } else {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya yükleme" })
+      showFeedback("error", error.message || "Beklenmeyen bir hata oluştu", { 
+        operation: "Dosya yükleme",
+        details: error 
+      })
     }
   }
 
@@ -175,7 +243,11 @@ const UploadForm = ({ customerCode, projectCode, panoName }) => {
       {/* File Input */}
       <div className="space-y-2">
         <label className="block text-sm font-medium">Excel Dosyası</label>
-        <Input type="file" accept=".xlsx,.xls" onChange={(e) => setFile(e.target.files[0])} />
+        <Input 
+          type="file" 
+          accept=".xlsx,.xls" 
+          onChange={handleFileChange} 
+        />
       </div>
 
       {/* Basic Information */}
@@ -191,12 +263,22 @@ const UploadForm = ({ customerCode, projectCode, panoName }) => {
 
       <div className="space-y-2">
         <label className="block text-sm font-medium">Sayfa Adı*</label>
-        <Input
-          name="sheetName"
-          placeholder="Örnek: UVP_CE_Listesi"
+        <Select
           value={formValues.sheetName}
-          onChange={handleChange}
-        />
+          onValueChange={(value) => setFormValues(prev => ({ ...prev, sheetName: value }))}
+          disabled={availableSheets.length === 0}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder={availableSheets.length > 0 ? "Sayfa seçin" : "Önce dosya yükleyin"} />
+          </SelectTrigger>
+          <SelectContent>
+            {availableSheets.map((sheet) => (
+              <SelectItem key={sheet} value={sheet}>
+                {sheet}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
