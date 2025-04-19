@@ -24,6 +24,14 @@ import { UIListItem } from "@/components/ui-list-item"
 import { LoadingButton } from "@/components/loading-button"
 import { FeedbackDialog } from "@/components/feedback-dialog"
 import { showFeedback } from "@/lib/feedback"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export default function Home() {
   const [customers, setCustomers] = useState([])
@@ -38,7 +46,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [manipulatedLists, setManipulatedLists] = useState([])
   const [selectedManipulatedList, setSelectedManipulatedList] = useState(null)
-  const [repeatCounts, setRepeatCounts] = useState({});
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [currentExportItem, setCurrentExportItem] = useState(null)
   const [exportSettings, setExportSettings] = useState({
     aderBMKExportDetailSettings: {
       fileName: "",
@@ -72,36 +81,64 @@ export default function Home() {
     name: "",
     description: "",
   })
-
+  const [repeatCount, setRepeatCount] = useState(1)
+  const [exportType, setExportType] = useState("HeadEnd")
+  const handleOpenExportDialog = (listName, labelType, applyedListName) => {
+    setCurrentExportItem({ listName, labelType, applyedListName })
+    setExportDialogOpen(true)
+  }
 
   const parseLabelError = (error) => {
-    if (!error.response?.data) return null;
-    
+    if (!error.response?.data) return null
+
     try {
       // Response'un string olma durumuna karşı kontrol
-      const errorData = typeof error.response.data === 'string' 
-        ? JSON.parse(error.response.data) 
-        : error.response.data;
-  
-      const errorParts = errorData.Message.split('&-&');
-      
+      const errorData = typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+
+      const errorParts = errorData.Message.split("&-&")
+
       return {
         status: errorData.Status,
         mainMessage: errorParts[0].trim(),
-        module: errorParts[1]?.replace('Hatanın oluştuğu modül:', '').trim(),
-        repository: errorParts[2]?.replace('İstek gönderilen repository:', '').trim(),
+        module: errorParts[1]?.replace("Hatanın oluştuğu modül:", "").trim(),
+        repository: errorParts[2]?.replace("İstek gönderilen repository:", "").trim(),
         exceptionType: errorData.Data,
-        products: errorParts[3]?.replace('Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-', '')
-          .split('\n')
-          .filter(p => p.trim())
-      };
+        products: errorParts[3]
+          ?.replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
+          .split("\n")
+          .filter((p) => p.trim()),
+      }
     } catch (e) {
-      console.error('Error parsing error response:', e);
-      return null;
+      console.error("Error parsing error response:", e)
+      return null
     }
-  };
+  }
 
+  const handleExportWithSettings = async (repeatCount) => {
+    if (!currentExportItem) return
 
+    const { listName, labelType, applyedListName } = currentExportItem
+
+    const exportSettings = {
+      aderBMKExportDetailSettings: {
+        fileName: applyedListName,
+        repeatCount: labelType === "AderBMK" ? repeatCount : 4,
+        labelRowCount: 12,
+        exportType: "HeadEnd",
+        hasIdentifierColumn: true,
+        spaceAvaliable: false,
+      },
+      klemensBMKExportDetailSettings: {},
+      deviceBMKExportSettings: {
+        fileName: applyedListName,
+        repeatCount: labelType === "DeviceBMK" ? repeatCount : 0,
+      },
+    }
+
+    await handleExportLabels(listName, labelType, applyedListName, exportSettings)
+
+    setExportDialogOpen(false)
+  }
 
   // Müşterileri yükle
   const loadCustomers = async () => {
@@ -179,16 +216,15 @@ export default function Home() {
     }
   }
 
-
   // Kural uygula
   const handleApplyRule = async (listName, labelType) => {
     if (!selectedRuleSet) {
-      showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" });
-      return;
+      showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" })
+      return
     }
-  
+
     try {
-      setLoading(true);
+      setLoading(true)
       const result = await applyRuleToLabel(
         selectedCustomer.code,
         selectedProject.code,
@@ -196,100 +232,104 @@ export default function Home() {
         listName,
         selectedRuleSet.id,
         false,
-      );
-      showFeedback("success", result, { operation: "Kural uygulama" });
+      )
+      showFeedback("success", result, { operation: "Kural uygulama" })
     } catch (error) {
       // Hata response'unu parse et
-      let errorMessage = error.message;
-      let errorDetails = null;
-      let productList = null;
-  
+      let errorMessage = error.message
+      let errorDetails = null
+      let productList = null
+
       // Backend'den gelen JSON formatındaki hata
       if (error.response?.data) {
         try {
-          const errorData = typeof error.response.data === 'string' 
-            ? JSON.parse(error.response.data) 
-            : error.response.data;
-  
+          const errorData =
+            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+
           // Hata mesajını parçalara ayır
-          const messageParts = errorData.Message?.split('&-&') || [];
-          
+          const messageParts = errorData.Message?.split("&-&") || []
+
           errorDetails = {
             status: errorData.Status || error.response.status,
             mainMessage: messageParts[0]?.trim() || errorData.Message,
-            module: messageParts[1]?.replace('Hatanın oluştuğu modül:', '').replace('The module where the error occurred:', '').trim(),
-            repository: messageParts[2]?.replace('İstek gönderilen repository:', '').replace('The repository to which the request was sent:', '').trim(),
+            module: messageParts[1]
+              ?.replace("Hatanın oluştuğu modül:", "")
+              .replace("The module where the error occurred:", "")
+              .trim(),
+            repository: messageParts[2]
+              ?.replace("İstek gönderilen repository:", "")
+              .replace("The repository to which the request was sent:", "")
+              .trim(),
             exceptionType: errorData.Data,
-          };
-  
+          }
+
           // Ürün listesini çıkar
           if (messageParts[3]) {
             productList = messageParts[3]
-              .replace('Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-', '')
-              .replace('List of devices without defined category(s):-ProductCodes:-', '')
-              .split('\n')
-              .filter(p => p.trim());
+              .replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
+              .replace("List of devices without defined category(s):-ProductCodes:-", "")
+              .split("\n")
+              .filter((p) => p.trim())
           }
-  
-          errorMessage = errorDetails.mainMessage;
+
+          errorMessage = errorDetails.mainMessage
         } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
+          console.error("Error parsing error response:", parseError)
         }
       }
-  
+
       // Console'a detaylı loglama
-      console.groupCollapsed('%cAPI Error Details', 'color: red; font-weight: bold;');
-      console.error('Endpoint:', `${error.config?.method?.toUpperCase()} ${error.config?.url}`);
-      console.error('Status:', error.response?.status || 'No response');
-      console.error('Message:', errorMessage);
-      
+      console.groupCollapsed("%cAPI Error Details", "color: red; font-weight: bold;")
+      console.error("Endpoint:", `${error.config?.method?.toUpperCase()} ${error.config?.url}`)
+      console.error("Status:", error.response?.status || "No response")
+      console.error("Message:", errorMessage)
+
       if (errorDetails) {
-        console.group('Error Details');
-        console.log('Module:', errorDetails.module);
-        console.log('Repository:', errorDetails.repository);
-        console.log('Exception:', errorDetails.exceptionType);
-        console.groupEnd();
+        console.group("Error Details")
+        console.log("Module:", errorDetails.module)
+        console.log("Repository:", errorDetails.repository)
+        console.log("Exception:", errorDetails.exceptionType)
+        console.groupEnd()
       }
-  
+
       if (productList?.length) {
-        console.group('%cInvalid Products (' + productList.length + ')', 'color: orange;');
+        console.group("%cInvalid Products (" + productList.length + ")", "color: orange;")
         productList.forEach((product, index) => {
-          console.log(`%c${index + 1}. ${product}`, 'color: #333;');
-        });
-        console.groupEnd();
+          console.log(`%c${index + 1}. ${product}`, "color: #333;")
+        })
+        console.groupEnd()
       }
-  
-      console.log('Full error object:', error);
-      console.groupEnd();
-  
+
+      console.log("Full error object:", error)
+      console.groupEnd()
+
       // Kullanıcıya gösterilecek feedback
       showFeedback("error", errorMessage, {
         operation: "Kural uygulama",
         errorDetails: {
           ...errorDetails,
           products: productList,
-          technicalMessage: `Modül: ${errorDetails?.module || 'Bilinmiyor'}\nRepository: ${errorDetails?.repository || 'Bilinmiyor'}`,
+          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`,
         },
-        showDetailsButton: true // Detayları göster butonu ekle
-      });
-  
+        showDetailsButton: true, // Detayları göster butonu ekle
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-    // Manipüle edilmiş listeleri getir
-    const handleGetManipulatedLabels = async (listName) => {
-      try {
-        setLoading(true)
-        const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
-        setManipulatedLists(data.applyedLists)
-      } catch (error) {
-        showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
-      } finally {
-        setLoading(false)
-      }
+  // Manipüle edilmiş listeleri getir
+  const handleGetManipulatedLabels = async (listName) => {
+    try {
+      setLoading(true)
+      const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
+      setManipulatedLists(data.applyedLists)
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
+    } finally {
+      setLoading(false)
     }
+  }
 
   const handleListLabels = async (listName, labelType) => {
     try {
@@ -307,8 +347,8 @@ export default function Home() {
   // Excel dosyasını indir
   const handleExportLabels = async (listName, labelType, applyedListName, customSettings = null) => {
     try {
-      setLoading(true);
-      
+      setLoading(true)
+
       // Özel ayarlar varsa onları kullan, yoksa mevcut exportSettings'i kullan
       const settings = customSettings || {
         ...exportSettings,
@@ -316,8 +356,8 @@ export default function Home() {
           ...exportSettings[`${labelType}ExportSettings`],
           fileName: applyedListName,
         },
-      };
-  
+      }
+
       const response = await exportLabelList(
         selectedCustomer.code,
         selectedProject.code,
@@ -325,27 +365,25 @@ export default function Home() {
         listName,
         labelType,
         applyedListName,
-        settings
-      );
-  
-      // Blob'dan dosya oluştur ve indir
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${applyedListName}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-  
-      showFeedback("success", "Excel dosyası indirildi", { operation: "Dosya indirme" });
-    } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya indirme" });
-    } finally {
-      setLoading(false);
-    }
-  };
+        settings,
+      )
 
-  
+      // Blob'dan dosya oluştur ve indir
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement("a")
+      link.href = url
+      link.setAttribute("download", `${applyedListName}.xlsx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+
+      showFeedback("success", "Excel dosyası indirildi", { operation: "Dosya indirme" })
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Dosya indirme" })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Kural uygula ve çıktı al
   const handleApplyAndExport = async (listName, labelType) => {
@@ -356,7 +394,7 @@ export default function Home() {
 
     try {
       setLoading(true)
-      
+
       // Önce kuralı uygula
       await applyRuleToLabel(
         selectedCustomer.code,
@@ -366,11 +404,11 @@ export default function Home() {
         selectedRuleSet.id,
         false,
       )
-      
+
       // Sonra çıktıyı al
       const applyedListName = `${listName}_${selectedRuleSet.name}`
       await handleExportLabels(listName, labelType, applyedListName)
-      
+
       showFeedback("success", "Etiketler başarıyla oluşturuldu ve indirildi", { operation: "Etiket oluşturma" })
     } catch (error) {
       showFeedback("error", error.response?.data?.message || error.message, { operation: "Etiket oluşturma" })
@@ -646,9 +684,7 @@ export default function Home() {
                               confirmText="Kuralı Uygula"
                             >
                               <div className="space-y-4">
-                                <p className="text-sm text-gray-600">
-                                  {group.listName} listesi için kural seti seçin
-                                </p>
+                                <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
                                 <Select
                                   onValueChange={(value) =>
                                     setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -673,7 +709,11 @@ export default function Home() {
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
-                                <Button size="sm" variant="secondary">
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => handleGetManipulatedLabels(group.listName)}
+                                >
                                   Listele
                                 </Button>
                               }
@@ -688,61 +728,41 @@ export default function Home() {
                               ) : manipulatedLists.length > 0 ? (
                                 <div className="space-y-3">
                                   {manipulatedLists.map((list, index) => (
-                                    <div key={index} className="p-3 border rounded-lg flex flex-col gap-3">
-                                      <div className="flex justify-between items-center">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="font-medium truncate">{list.applyedListName}</p>
-                                          <p className="text-sm text-gray-600 truncate">
-                                            {list.labelType} - {list.listRowCount} kayıt
-                                          </p>
-                                        </div>
+                                    <div
+                                      key={index}
+                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{list.applyedListName}</p>
+                                        <p className="text-sm text-gray-600 truncate">
+                                          {list.labelType} - {list.listRowCount} kayıt
+                                        </p>
                                       </div>
-                              
-                                      {list.labelType === "DeviceBMK" && (
-                                        <div className="flex items-center gap-2">
-                                          <Label htmlFor={`repeatCount-${index}`}>Tekrar Sayısı:</Label>
-                                          <Input
-                                            id={`repeatCount-${index}`}
-                                            type="number"
-                                            min="0"
-                                            value={repeatCounts[index] || 0}
-                                            onChange={(e) => setRepeatCounts({
-                                              ...repeatCounts,
-                                              [index]: Number(e.target.value)
-                                            })}
-                                            className="w-20"
-                                          />
-                                        </div>
-                                      )}
-                              
-                                      <LoadingButton
+                                      <Button
                                         size="sm"
-                                        isLoading={loading}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const exportSettings = {
-                                            ...exportSettings,
-                                            deviceBMKExportSettings: {
-                                              fileName: list.applyedListName,
-                                              repeatCount: list.labelType === "DeviceBMK" ? (repeatCounts[index] || 0) : 0,
-                                            },
-                                          };
-                                          handleExportLabels(
-                                            group.listName,
-                                            list.labelType,
-                                            list.applyedListName,
-                                            exportSettings
-                                          );
+                                        onClick={() => {
+                                          setCurrentExportItem({
+                                            listName: group.listName,
+                                            labelType: list.labelType,
+                                            applyedListName: list.applyedListName,
+                                            defaultRepeatCount:
+                                              list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          })
+                                          setRepeatCount(
+                                            list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          )
+                                          setExportDialogOpen(true)
                                         }}
-                                        className="self-end"
                                       >
                                         Çıktı Al
-                                      </LoadingButton>
+                                      </Button>
                                     </div>
                                   ))}
                                 </div>
                               ) : (
-                                <p>Manipüle edilmiş liste bulunamadı</p>
+                                <div className="py-4 text-center text-gray-500">
+                                  <p>Manipüle edilmiş liste bulunamadı</p>
+                                </div>
                               )}
                             </FeedbackDialog>
                           </>
@@ -775,9 +795,7 @@ export default function Home() {
                               confirmText="Kuralı Uygula"
                             >
                               <div className="space-y-4">
-                                <p className="text-sm text-gray-600">
-                                  {group.listName} listesi için kural seti seçin
-                                </p>
+                                <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
                                 <Select
                                   onValueChange={(value) =>
                                     setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -802,8 +820,8 @@ export default function Home() {
                             <FeedbackDialog
                               title="Manipüle Edilmiş Listeler"
                               trigger={
-                                <Button 
-                                  size="sm" 
+                                <Button
+                                  size="sm"
                                   variant="secondary"
                                   onClick={() => handleGetManipulatedLabels(group.listName)}
                                 >
@@ -812,7 +830,7 @@ export default function Home() {
                               }
                               onConfirm={() => handleGetManipulatedLabels(group.listName)}
                               confirmText="Listeyi Yenile"
-                              closeOnConfirm={false} // Dialog'un kapanmaması için
+                              closeOnConfirm={false}
                             >
                               {loading ? (
                                 <div className="flex justify-center py-8">
@@ -821,8 +839,8 @@ export default function Home() {
                               ) : manipulatedLists.length > 0 ? (
                                 <div className="space-y-3">
                                   {manipulatedLists.map((list, index) => (
-                                    <div 
-                                      key={index} 
+                                    <div
+                                      key={index}
                                       className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
                                     >
                                       <div className="flex-1 min-w-0">
@@ -831,17 +849,24 @@ export default function Home() {
                                           {list.labelType} - {list.listRowCount} kayıt
                                         </p>
                                       </div>
-                                      <LoadingButton
+                                      <Button
                                         size="sm"
-                                        isLoading={loading}
-                                        onClick={(e) => {
-                                          e.stopPropagation(); // Dialog'un kapanmasını engellemek için
-                                          handleExportLabels(group.listName, list.labelType, list.applyedListName)
+                                        onClick={() => {
+                                          setCurrentExportItem({
+                                            listName: group.listName,
+                                            labelType: list.labelType,
+                                            applyedListName: list.applyedListName,
+                                            defaultRepeatCount:
+                                              list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          })
+                                          setRepeatCount(
+                                            list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          )
+                                          setExportDialogOpen(true)
                                         }}
-                                        className="ml-2 shrink-0"
                                       >
                                         Çıktı Al
-                                      </LoadingButton>
+                                      </Button>
                                     </div>
                                   ))}
                                 </div>
@@ -881,9 +906,7 @@ export default function Home() {
                               confirmText="Kuralı Uygula"
                             >
                               <div className="space-y-4">
-                                <p className="text-sm text-gray-600">
-                                  {group.listName} listesi için kural seti seçin
-                                </p>
+                                <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
                                 <Select
                                   onValueChange={(value) =>
                                     setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -916,29 +939,41 @@ export default function Home() {
                               confirmText="Listeyi Yenile"
                             >
                               {manipulatedLists.length > 0 ? (
-                                <ul className="space-y-2">
+                                <div className="space-y-3">
                                   {manipulatedLists.map((list, index) => (
-                                    <li key={index} className="p-3 border rounded flex justify-between items-center">
-                                      <div>
-                                        <p className="font-medium">{list.applyedListName}</p>
-                                        <p className="text-sm text-gray-600">
+                                    <div
+                                      key={index}
+                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{list.applyedListName}</p>
+                                        <p className="text-sm text-gray-600 truncate">
                                           {list.labelType} - {list.listRowCount} kayıt
                                         </p>
                                       </div>
-                                      <LoadingButton
+                                      <Button
                                         size="sm"
-                                        isLoading={loading}
-                                        onClick={() =>
-                                          handleExportLabels(group.listName, list.labelType, list.applyedListName)
-                                        }
+                                        onClick={() => {
+                                          setCurrentExportItem({
+                                            listName: group.listName,
+                                            labelType: list.labelType,
+                                            applyedListName: list.applyedListName,
+                                            defaultRepeatCount:
+                                              list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          })
+                                          setRepeatCount(
+                                            list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                          )
+                                          setExportDialogOpen(true)
+                                        }}
                                       >
                                         Çıktı Al
-                                      </LoadingButton>
-                                    </li>
+                                      </Button>
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
                               ) : (
-                                <p>Manipüle edilmiş liste bulunamadı</p>
+                                <p className="py-4 text-center text-gray-500">Manipüle edilmiş liste bulunamadı</p>
                               )}
                             </FeedbackDialog>
                           </>
@@ -948,6 +983,85 @@ export default function Home() {
                   </ul>
                 </div>
               )}
+
+              {/* Export Settings Dialog */}
+              <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Çıktı Ayarları</DialogTitle>
+                    <DialogDescription>
+                      {currentExportItem?.applyedListName} için export ayarlarını yapılandırın
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="repeatCount" className="text-right">
+                        Tekrar Sayısı
+                      </Label>
+                      <Input
+                        id="repeatCount"
+                        type="number"
+                        min="0"
+                        value={repeatCount}
+                        onChange={(e) => setRepeatCount(Number(e.target.value))}
+                        className="col-span-3"
+                      />
+                    </div>
+
+                    {currentExportItem?.labelType === "AderBMK" && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="exportType" className="text-right">
+                          Export Tipi
+                        </Label>
+                        <Select value={exportType} onValueChange={setExportType}>
+                          <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Export tipi seçin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HeadEnd">HeadEnd</SelectItem>
+                            <SelectItem value="Full">Full</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <LoadingButton
+                      isLoading={loading}
+                      onClick={() => {
+                        const exportSettings = {
+                          aderBMKExportDetailSettings: {
+                            fileName: currentExportItem.applyedListName,
+                            repeatCount: currentExportItem.labelType === "AderBMK" ? repeatCount : 4,
+                            labelRowCount: 12,
+                            exportType: exportType,
+                            hasIdentifierColumn: true,
+                            spaceAvaliable: false,
+                          },
+                          klemensBMKExportDetailSettings: {},
+                          deviceBMKExportSettings: {
+                            fileName: currentExportItem.applyedListName,
+                            repeatCount: currentExportItem.labelType === "DeviceBMK" ? repeatCount : 0,
+                          },
+                        }
+
+                        handleExportLabels(
+                          currentExportItem.listName,
+                          currentExportItem.labelType,
+                          currentExportItem.applyedListName,
+                          exportSettings,
+                        )
+
+                        setExportDialogOpen(false)
+                      }}
+                    >
+                      Çıktı Al
+                    </LoadingButton>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
         </UICard>
