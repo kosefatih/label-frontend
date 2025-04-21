@@ -325,24 +325,67 @@ export default function Home() {
       const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
       setManipulatedLists(data.applyedLists)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
+      let errorMessage = error.message
+      let errorDetails = null
+  
+      if (error.response?.data) {
+        try {
+          const errorData =
+            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+  
+          const messageParts = errorData.Message?.split("&-&") || []
+  
+          errorDetails = {
+            status: errorData.Status || error.response.status,
+            mainMessage: messageParts[0]?.trim() || errorData.Message,
+            module: messageParts[1]
+              ?.replace("Hatanın oluştuğu modül:", "")
+              .replace("The module where the error occurred:", "")
+              .trim(),
+            repository: messageParts[2]
+              ?.replace("İstek gönderilen repository:", "")
+              .replace("The repository to which the request was sent:", "")
+              .trim(),
+            exceptionType: errorData.Data,
+          }
+  
+          errorMessage = errorDetails.mainMessage
+        } catch (parseError) {
+          console.error("Error parsing error response:", parseError)
+        }
+      }
+  
+      // Console log
+      console.groupCollapsed("%cAPI Error Details", "color: red; font-weight: bold;")
+      console.error("Endpoint:", `${error.config?.method?.toUpperCase()} ${error.config?.url}`)
+      console.error("Status:", error.response?.status || "No response")
+      console.error("Message:", errorMessage)
+  
+      if (errorDetails) {
+        console.group("Error Details")
+        console.log("Module:", errorDetails.module)
+        console.log("Repository:", errorDetails.repository)
+        console.log("Exception:", errorDetails.exceptionType)
+        console.groupEnd()
+      }
+  
+      console.log("Full error object:", error)
+      console.groupEnd()
+  
+      showFeedback("error", errorMessage, {
+        operation: "Liste yükleme",
+        errorDetails: {
+          ...errorDetails,
+          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`,
+        },
+        showDetailsButton: true,
+      })
     } finally {
       setLoading(false)
     }
   }
+  
 
-  const handleListLabels = async (listName, labelType) => {
-    try {
-      setLoading(true)
-      const data = await getManipulatedLabels(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
-      setManipulatedLists(data.applyedLists)
-      showFeedback("success", "Manipüle edilmiş listeler yüklendi", { operation: "Liste yükleme" })
-    } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste yükleme" })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Excel dosyasını indir
   const handleExportLabels = async (listName, labelType, applyedListName, customSettings = null) => {
