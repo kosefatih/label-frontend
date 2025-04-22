@@ -12,8 +12,10 @@ import {
   applyRuleToLabel,
   getManipulatedLabels,
   exportLabelList,
+  createMultipleDeviceDefines,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
+import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -81,12 +83,76 @@ export default function Home() {
     name: "",
     description: "",
   })
+  const [deviceDefines, setDeviceDefines] = useState([
+    {
+      eplanId: "",
+      category: "",
+      productNumber: "",
+      orderNumber: "",
+      producerName: "",
+      producerCode: ""
+    }
+  ]);
+  const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false);
   const [repeatCount, setRepeatCount] = useState(1)
   const [exportType, setExportType] = useState("HeadEnd")
+
+
+
+
   const handleOpenExportDialog = (listName, labelType, applyedListName) => {
     setCurrentExportItem({ listName, labelType, applyedListName })
     setExportDialogOpen(true)
   }
+
+
+  const handleDeviceDefineChange = (index, field, value) => {
+    const newDefines = [...deviceDefines];
+    newDefines[index][field] = value;
+    setDeviceDefines(newDefines);
+  };
+  
+  const addNewDeviceDefineRow = () => {
+    setDeviceDefines([
+      ...deviceDefines,
+      {
+        eplanId: "",
+        category: "",
+        productNumber: "",
+        orderNumber: "",
+        producerName: "",
+        producerCode: ""
+      }
+    ]);
+  };
+  
+  const removeDeviceDefineRow = (index) => {
+    if (deviceDefines.length <= 1) return;
+    const newDefines = [...deviceDefines];
+    newDefines.splice(index, 1);
+    setDeviceDefines(newDefines);
+  };
+  
+  const handleSubmitDeviceDefines = async () => {
+    try {
+      setLoading(true);
+      await createMultipleDeviceDefines(deviceDefines);
+      showFeedback("success", "Cihaz tanımları başarıyla eklendi", { operation: "Cihaz tanımları ekleme" });
+      setShowDeviceDefineDialog(false);
+      setDeviceDefines([{
+        eplanId: "",
+        category: "",
+        productNumber: "",
+        orderNumber: "",
+        producerName: "",
+        producerCode: ""
+      }]);
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Cihaz tanımları ekleme" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const parseLabelError = (error) => {
     if (!error.response?.data) return null
@@ -596,6 +662,14 @@ export default function Home() {
 
   return (
     <AppLayout title="Etiket Yönetimi">
+    <Button 
+      variant="outline" 
+      className="mb-4"
+      onClick={() => setShowDeviceDefineDialog(true)}
+    >
+      Cihaz Tanımları Ekle
+    </Button>
+    
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Müşteriler */}
         <UICard
@@ -1025,6 +1099,7 @@ export default function Home() {
                     ))}
                   </ul>
                 </div>
+                
               )}
 
               {/* Export Settings Dialog */}
@@ -1121,6 +1196,118 @@ export default function Home() {
           />
         </div>
       )}
+      <Dialog open={showDeviceDefineDialog} onOpenChange={setShowDeviceDefineDialog}>
+        <DialogContent className="max-w-6xl w-[90vw]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Çoklu Cihaz Tanımı Ekle</DialogTitle>
+            <DialogDescription>
+              Aşağıdaki formu kullanarak birden fazla cihaz tanımı ekleyebilirsiniz.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto p-2">
+            {deviceDefines.map((define, index) => (
+              <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
+                {/* 1. Sütun Grubu */}
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label>Eplan ID</Label>
+                    <Input
+                      value={define.eplanId}
+                      onChange={(e) => handleDeviceDefineChange(index, 'eplanId', e.target.value)}
+                      className="w-full h-10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Kategori</Label>
+                    <Input
+                      value={define.category}
+                      onChange={(e) => handleDeviceDefineChange(index, 'category', e.target.value)}
+                      className="w-full h-10"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Sütun Grubu */}
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label>Ürün Numarası</Label>
+                    <Input
+                      value={define.productNumber}
+                      onChange={(e) => handleDeviceDefineChange(index, 'productNumber', e.target.value)}
+                      className="w-full h-10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Sipariş Numarası</Label>
+                    <Input
+                      value={define.orderNumber}
+                      onChange={(e) => handleDeviceDefineChange(index, 'orderNumber', e.target.value)}
+                      className="w-full h-10"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Sütun Grubu */}
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label>Üretici Adı</Label>
+                    <Input
+                      value={define.producerName}
+                      onChange={(e) => handleDeviceDefineChange(index, 'producerName', e.target.value)}
+                      className="w-full h-10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Üretici Kodu</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={define.producerCode}
+                        onChange={(e) => handleDeviceDefineChange(index, 'producerCode', e.target.value)}
+                        className="flex-1 h-10"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => removeDeviceDefineRow(index)}
+                        disabled={deviceDefines.length <= 1}
+                        className="h-10 w-10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <Button 
+              variant="outline" 
+              onClick={addNewDeviceDefineRow}
+              className="h-12 text-md w-full"
+            >
+              <Plus className="mr-2 h-5 w-5" /> Yeni Satır Ekle
+            </Button>
+          </div>
+          
+          <DialogFooter className="px-2 py-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowDeviceDefineDialog(false)}
+              className="h-12 px-6"
+            >
+              İptal
+            </Button>
+            <LoadingButton 
+              isLoading={loading} 
+              onClick={handleSubmitDeviceDefines}
+              className="h-12 px-6 text-md"
+            >
+              Kaydet
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   )
 }

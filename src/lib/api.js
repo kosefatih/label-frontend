@@ -22,7 +22,6 @@ export const getLabels = async (customerCode, projectCode, panoCode) => {
   return res.data.data;
 };
 
-// lib/api.js
 export const uploadExcel = async (person, customerCode, projectCode, panoCode, file, descModel) => {
   const formData = new FormData();
   
@@ -132,5 +131,19 @@ export const createPano = async (customerCode, projectCode, panoData) => {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
   });
+  return res.data;
+};
+
+export const createMultipleDeviceDefines = async (deviceDefinitions) => {
+  const res = await axios.post(
+    `${API_URL}/settings/label_manipulation_module/params/device_defines/multiple`,
+    deviceDefinitions,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
   return res.data;
 };
