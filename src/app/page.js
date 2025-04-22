@@ -288,7 +288,7 @@ export default function Home() {
       showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" })
       return
     }
-
+  
     try {
       setLoading(true)
       const result = await applyRuleToLabel(
@@ -301,83 +301,46 @@ export default function Home() {
       )
       showFeedback("success", result, { operation: "Kural uygulama" })
     } catch (error) {
-      // Hata response'unu parse et
       let errorMessage = error.message
       let errorDetails = null
       let productList = null
-
-      // Backend'den gelen JSON formatındaki hata
+  
       if (error.response?.data) {
         try {
-          const errorData =
-            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
-
-          // Hata mesajını parçalara ayır
+          const errorData = typeof error.response.data === "string" ? 
+            JSON.parse(error.response.data) : error.response.data
+  
           const messageParts = errorData.Message?.split("&-&") || []
-
+  
           errorDetails = {
             status: errorData.Status || error.response.status,
             mainMessage: messageParts[0]?.trim() || errorData.Message,
-            module: messageParts[1]
-              ?.replace("Hatanın oluştuğu modül:", "")
-              .replace("The module where the error occurred:", "")
-              .trim(),
-            repository: messageParts[2]
-              ?.replace("İstek gönderilen repository:", "")
-              .replace("The repository to which the request was sent:", "")
-              .trim(),
+            module: messageParts[1]?.replace("Hatanın oluştuğu modül:", "").trim(),
+            repository: messageParts[2]?.replace("İstek gönderilen repository:", "").trim(),
             exceptionType: errorData.Data,
           }
-
-          // Ürün listesini çıkar
+  
           if (messageParts[3]) {
             productList = messageParts[3]
               .replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
-              .replace("List of devices without defined category(s):-ProductCodes:-", "")
               .split("\n")
               .filter((p) => p.trim())
           }
-
+  
           errorMessage = errorDetails.mainMessage
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
       }
-
-      // Console'a detaylı loglama
-      console.groupCollapsed("%cAPI Error Details", "color: red; font-weight: bold;")
-      console.error("Endpoint:", `${error.config?.method?.toUpperCase()} ${error.config?.url}`)
-      console.error("Status:", error.response?.status || "No response")
-      console.error("Message:", errorMessage)
-
-      if (errorDetails) {
-        console.group("Error Details")
-        console.log("Module:", errorDetails.module)
-        console.log("Repository:", errorDetails.repository)
-        console.log("Exception:", errorDetails.exceptionType)
-        console.groupEnd()
-      }
-
-      if (productList?.length) {
-        console.group("%cInvalid Products (" + productList.length + ")", "color: orange;")
-        productList.forEach((product, index) => {
-          console.log(`%c${index + 1}. ${product}`, "color: #333;")
-        })
-        console.groupEnd()
-      }
-
-      console.log("Full error object:", error)
-      console.groupEnd()
-
-      // Kullanıcıya gösterilecek feedback
+  
+      // Kullanıcıya göster
       showFeedback("error", errorMessage, {
         operation: "Kural uygulama",
+        products: productList,
         errorDetails: {
           ...errorDetails,
-          products: productList,
-          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`,
-        },
-        showDetailsButton: true, // Detayları göster butonu ekle
+          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`
+        }
       })
     } finally {
       setLoading(false)
