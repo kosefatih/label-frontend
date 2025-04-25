@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   getCustomers,
   createCustomer,
@@ -631,6 +632,14 @@ export default function Home() {
       onClick={() => setShowDeviceDefineDialog(true)}
     >
       Cihaz Tanımları Ekle
+    </Button>
+    <Button 
+      variant="outline" 
+      asChild
+    >
+      <Link href="/rules">
+        Kurallar
+      </Link>
     </Button>
     
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

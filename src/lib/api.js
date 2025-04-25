@@ -147,3 +147,110 @@ export const createMultipleDeviceDefines = async (deviceDefinitions) => {
   );
   return res.data;
 };
+
+// Kural Seti İşlemleri
+export const createRuleSet = async (ruleSetData) => {
+  const res = await axios.post(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets`,
+    ruleSetData,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return res.data;
+};
+
+export const getRuleSetById = async (ruleSetId) => {
+  const res = await axios.get(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data.data;
+};
+
+export const updateRuleSet = async (ruleSetId, ruleSetData) => {
+  const res = await axios.put(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}`,
+    ruleSetData,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return res.data;
+};
+
+export const deleteRuleSet = async (ruleSetId) => {
+  const res = await axios.delete(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data;
+};
+
+// Kural tiplerini getir
+export const getRuleTypes = async () => {
+  const res = await axios.get(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/types`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data.data;
+};
+
+// Kural ekle
+export const addRuleToRuleSet = async (ruleSetId, ruleData) => {
+  const res = await axios.post(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}`,
+    ruleData,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return res.data;
+};
+
+export const updateRule = async (ruleSetId, ruleId, ruleData) => {
+  const res = await axios.put(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}/rules/${ruleId}`,
+    ruleData,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  return res.data;
+};
+
+export const deleteRule = async (ruleSetId, ruleId) => {
+  const res = await axios.delete(
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}/${ruleId}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data;
+};
