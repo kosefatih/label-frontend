@@ -51,6 +51,7 @@ export default function Home() {
   const [selectedManipulatedList, setSelectedManipulatedList] = useState(null)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [currentExportItem, setCurrentExportItem] = useState(null)
+  const [errors, setErrors] = useState({});
   const [exportSettings, setExportSettings] = useState({
     aderBMKExportDetailSettings: {
       fileName: "",
@@ -108,9 +109,25 @@ export default function Home() {
 
 
   const handleDeviceDefineChange = (index, field, value) => {
-    const newDefines = [...deviceDefines];
-    newDefines[index][field] = value;
-    setDeviceDefines(newDefines);
+    // Eğer field 'eplanId' ise ve '/' içeriyorsa hata ayarla
+    if (field === 'eplanId' && value.includes('/')) {
+      setErrors(prev => ({
+        ...prev,
+        [index]: "Eplan ID'de '/' karakteri kullanılamaz"
+      }));
+    } else {
+      // Hata yoksa hata mesajını temizle
+      setErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[index];
+        return newErrors;
+      });
+    }
+  
+    // State'i güncelle
+    const updatedDefines = [...deviceDefines];
+    updatedDefines[index][field] = value;
+    setDeviceDefines(updatedDefines);
   };
   
   const addNewDeviceDefineRow = () => {
@@ -135,10 +152,51 @@ export default function Home() {
   };
   
   const handleSubmitDeviceDefines = async () => {
+    // 1. Validasyon işlemleri
+    const validationErrors = {};
+    let hasError = false;
+  
+    deviceDefines.forEach((define, index) => {
+      // Eplan ID'de '/' kontrolü
+      if (define.eplanId.includes('/')) {
+        validationErrors[index] = "Eplan ID'de '/' karakteri kullanılamaz";
+        hasError = true;
+      }
+      
+      // Eplan ID boş mu kontrolü (opsiyonel)
+      if (!define.eplanId.trim()) {
+        validationErrors[index] = validationErrors[index] || "Eplan ID zorunludur";
+        hasError = true;
+      }
+    });
+  
+    // 2. Hata varsa işlemi durdur
+    if (hasError) {
+      setErrors(validationErrors);
+      
+      // İlk hatalı alana odaklan ve scroll et
+      const firstErrorIndex = Object.keys(validationErrors)[0];
+      if (firstErrorIndex) {
+        const element = document.getElementById(`eplanId-${firstErrorIndex}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+        }
+      }
+      
+      showFeedback("error", "Lütfen formdaki hataları düzeltin", { operation: "Cihaz tanımları ekleme" });
+      return;
+    }
+  
+    // 3. Validasyon başarılıysa API isteğini yap
     try {
       setLoading(true);
       await createMultipleDeviceDefines(deviceDefines);
-      showFeedback("success", "Cihaz tanımları başarıyla eklendi", { operation: "Cihaz tanımları ekleme" });
+      
+      // 4. Başarılı durumda formu resetle
+      showFeedback("success", "Cihaz tanımları başarıyla eklendi", { 
+        operation: "Cihaz tanımları ekleme" 
+      });
       setShowDeviceDefineDialog(false);
       setDeviceDefines([{
         eplanId: "",
@@ -148,8 +206,12 @@ export default function Home() {
         producerName: "",
         producerCode: ""
       }]);
+      setErrors({}); // Hataları temizle
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Cihaz tanımları ekleme" });
+      // 5. Hata durumunda kullanıcıyı bilgilendir
+      showFeedback("error", error.response?.data?.message || error.message, { 
+        operation: "Cihaz tanımları ekleme" 
+      });
     } finally {
       setLoading(false);
     }
@@ -1185,10 +1247,14 @@ export default function Home() {
                   <div className="space-y-1">
                     <Label>Eplan ID</Label>
                     <Input
+                      id={`eplanId-${index}`}
                       value={define.eplanId}
                       onChange={(e) => handleDeviceDefineChange(index, 'eplanId', e.target.value)}
-                      className="w-full h-10"
+                      className={`w-full h-10 ${errors[index] ? 'border-red-500' : ''}`}
                     />
+                    {errors[index] && (
+                      <p className="text-red-500 text-sm">{errors[index]}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label>Kategori</Label>
@@ -1265,7 +1331,10 @@ export default function Home() {
           <DialogFooter className="px-2 py-4 border-t">
             <Button 
               variant="outline" 
-              onClick={() => setShowDeviceDefineDialog(false)}
+              onClick={() => {
+                setErrors({});
+                setShowDeviceDefineDialog(false);
+              }}
               className="h-12 px-6"
             >
               İptal
