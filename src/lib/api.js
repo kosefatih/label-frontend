@@ -135,7 +135,7 @@ export const createPano = async (customerCode, projectCode, panoData) => {
 };
 
 export const createMultipleDeviceDefines = async (deviceDefinitions) => {
-  const res = await axios.post(
+  const res = await axios.put(
     `${API_URL}/settings/label_manipulation_module/params/device_defines/multiple`,
     deviceDefinitions,
     {
