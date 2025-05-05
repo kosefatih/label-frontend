@@ -687,7 +687,7 @@ export default function Home() {
   )
 
   return (
-    <AppLayout title="Etiket Yönetimi">
+    <AppLayout title="Etiket Manipülasyon Programı">
     <Button 
       variant="outline" 
       className="mb-4"
