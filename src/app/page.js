@@ -16,9 +16,10 @@ import {
   createMultipleDeviceDefines,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, FilePlus, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AppLayout } from "@/components/app-layout"
@@ -824,100 +825,145 @@ export default function Home() {
                         key={i}
                         title={`${group.listName} (${group.listRowCount} kayıt)`}
                         actions={
-                          <>
-                            <FeedbackDialog
-                              title="Kural Seti Seçin"
-                              trigger={
-                                <Button size="sm" variant="outline">
-                                  Etiket Çıkart
-                                </Button>
-                              }
-                              onConfirm={() => handleApplyRule(group.listName, "AderBMK")}
-                              confirmText="Kuralı Uygula"
-                            >
-                              <div className="space-y-4">
-                                <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
-                                <Select
-                                  onValueChange={(value) =>
-                                    setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Kural seti seçin" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {ruleSets
-                                      .filter((r) => r.labelType === "AderBMK")
-                                      .map((ruleSet) => (
-                                        <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
-                                          {ruleSet.name} ({ruleSet.ruleCount} kural)
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </FeedbackDialog>
+                          <div className="flex flex-wrap gap-5">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FeedbackDialog
+                                    title="Kural Seti Seçin"
+                                    trigger={
+                                      <Button size="sm" variant="outline" className="h-8 px-2">
+                                        <FilePlus className="h-4 w-4" />
+                                      </Button>
+                                    }
+                                    onConfirm={() => handleApplyRule(group.listName, "AderBMK")}
+                                    confirmText="Kuralı Uygula"
+                                  >
+                                    <div className="space-y-4">
+                                      <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
+                                      <Select
+                                        onValueChange={(value) =>
+                                          setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
+                                        }
+                                      >
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Kural seti seçin" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {ruleSets
+                                            .filter((r) => r.labelType === "AderBMK")
+                                            .map((ruleSet) => (
+                                              <SelectItem key={ruleSet.id} value={ruleSet.id.toString()}>
+                                                {ruleSet.name} ({ruleSet.ruleCount} kural)
+                                              </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </FeedbackDialog>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Etiket Çıkart</p>
+                                </TooltipContent>
+                              </Tooltip>
 
-                            <FeedbackDialog
-                              title="Manipüle Edilmiş Listeler"
-                              trigger={
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleGetManipulatedLabels(group.listName)}
-                                >
-                                  Listele
-                                </Button>
-                              }
-                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
-                              confirmText="Listeyi Yenile"
-                              closeOnConfirm={false}
-                            >
-                              {loading ? (
-                                <div className="flex justify-center py-8">
-                                  <p>Yükleniyor...</p>
-                                </div>
-                              ) : manipulatedLists.length > 0 ? (
-                                <div className="space-y-3">
-                                  {manipulatedLists.map((list, index) => (
-                                    <div
-                                      key={index}
-                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
-                                    >
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium truncate">{list.applyedListName}</p>
-                                        <p className="text-sm text-gray-600 truncate">
-                                          {list.labelType} - {list.listRowCount} kayıt
-                                        </p>
-                                      </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FeedbackDialog
+                                    title="Manipüle Edilmiş Listeler"
+                                    trigger={
                                       <Button
                                         size="sm"
-                                        onClick={() => {
-                                          setCurrentExportItem({
-                                            listName: group.listName,
-                                            labelType: list.labelType,
-                                            applyedListName: list.applyedListName,
-                                            defaultRepeatCount:
-                                              list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
-                                          })
-                                          setRepeatCount(
-                                            list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
-                                          )
-                                          setExportDialogOpen(true)
-                                        }}
+                                        variant="secondary"
+                                        className="h-8 px-2"
+                                        onClick={() => handleGetManipulatedLabels(group.listName)}
                                       >
-                                        Çıktı Al
+                                        <List className="h-4 w-4" />
                                       </Button>
+                                    }
+                                    onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                                    confirmText="Listeyi Yenile"
+                                    closeOnConfirm={false}
+                                  >
+                                    {loading ? (
+                                      <div className="flex justify-center py-8">
+                                        <p>Yükleniyor...</p>
+                                      </div>
+                                    ) : manipulatedLists.length > 0 ? (
+                                      <div className="space-y-3">
+                                        {manipulatedLists.map((list, index) => (
+                                          <div
+                                            key={index}
+                                            className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                          >
+                                            <div className="flex-1 min-w-0">
+                                              <p className="font-medium truncate">{list.applyedListName}</p>
+                                              <p className="text-sm text-gray-600 truncate">
+                                                {list.labelType} - {list.listRowCount} kayıt
+                                              </p>
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              onClick={() => {
+                                                setCurrentExportItem({
+                                                  listName: group.listName,
+                                                  labelType: list.labelType,
+                                                  applyedListName: list.applyedListName,
+                                                  defaultRepeatCount:
+                                                    list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                })
+                                                setRepeatCount(
+                                                  list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                )
+                                                setExportDialogOpen(true)
+                                              }}
+                                            >
+                                              Çıktı Al
+                                            </Button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="py-4 text-center text-gray-500">
+                                        <p>Manipüle edilmiş liste bulunamadı</p>
+                                      </div>
+                                    )}
+                                  </FeedbackDialog>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Listele</p>
+                                </TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FeedbackDialog
+                                    title="Listeyi Sil"
+                                    trigger={
+                                      <Button size="sm" variant="destructive" className="h-8 px-2">
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    }
+                                    onConfirm={() => handleDeleteLabel(group.listName)}
+                                    confirmText="Sil"
+                                    cancelText="Vazgeç"
+                                  >
+                                    <div className="space-y-2">
+                                      <p className="text-sm text-gray-600">
+                                        {group.listName} listesini silmek üzeresiniz. Bu işlem geri alınamaz.
+                                      </p>
+                                      <p className="text-sm font-medium text-red-600">
+                                        {group.listRowCount} kayıt silinecek.
+                                      </p>
                                     </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="py-4 text-center text-gray-500">
-                                  <p>Manipüle edilmiş liste bulunamadı</p>
-                                </div>
-                              )}
-                            </FeedbackDialog>
-                          </>
+                                  </FeedbackDialog>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Sil</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         }
                       />
                     ))}
@@ -1225,7 +1271,8 @@ export default function Home() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="HeadEnd">HeadEnd</SelectItem>
-                          <SelectItem value="AlfaNumeric">AlfaNumeric</SelectItem>
+                          <SelectItem value="Alphabethic">Alphabethic</SelectItem>
+                          <SelectItem value="Standard">Standard</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1301,7 +1348,7 @@ export default function Home() {
       {/* --- Excel Yükleme Formu --- */}
       {selectedPano && (
         <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-4">Excelden Etiket Yükle</h2>
+          <h2 className="text-2xl font-semibold mb-4">Excel Etiket Listesi Yükle</h2>
           <UploadForm
             customerCode={selectedCustomer.code}
             projectCode={selectedProject.code}

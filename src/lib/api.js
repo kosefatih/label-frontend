@@ -254,3 +254,16 @@ export const deleteRule = async (ruleSetId, ruleId) => {
   );
   return res.data;
 };
+
+// Etiket listesini sil
+export const deleteLabelList = async (customerCode, projectCode, panoCode, listName) => {
+  const res = await axios.delete(
+    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data;
+};
