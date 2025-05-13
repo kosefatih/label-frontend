@@ -9,7 +9,7 @@ export function AppLayout({ children, title }) {
           <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
         </div>
       </header>
-      <main className="container mx-auto px-4 py-8">{children}</main>
+      <main className="w-full px-4 py-8">{children}</main>
       <ToastContainer
         position="top-right"
         autoClose={3000}

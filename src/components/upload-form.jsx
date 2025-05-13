@@ -7,6 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { showFeedback } from "@/lib/feedback"
 import { LoadingButton } from "./loading-button"
 import * as XLSX from "xlsx"
+import { Button } from "@/components/ui/button"
+import { Eye } from "lucide-react"
+import ExcelPreviewHandler from "./excel-preview-handler"
+import ManipulatedLabelsPreview from "./manipulated-labels-preview"
 
 const UploadForm = ({ customerCode, projectCode, panoCode }) => {
   // Form state
@@ -36,33 +40,35 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     deviceMerged: 2,
     deviceProduct: 4,
   })
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [previewData, setPreviewData] = useState(null)
+  const [processingPreview, setProcessingPreview] = useState(false)
 
+  // Handle file selection and read sheet names
+  const handleFileChange = async (e) => {
+    const selectedFile = e.target.files[0]
+    if (!selectedFile) return
 
-    // Handle file selection and read sheet names
-    const handleFileChange = async (e) => {
-      const selectedFile = e.target.files[0]
-      if (!selectedFile) return
-  
-      setFile(selectedFile)
-  
-      try {
-        const data = await selectedFile.arrayBuffer()
-        const workbook = XLSX.read(data)
-        const sheets = workbook.SheetNames
-        setAvailableSheets(sheets)
-        
-        // Otomatik olarak ilk sheet'i seç
-        if (sheets.length > 0) {
-          setFormValues(prev => ({
-            ...prev,
-            sheetName: sheets[0]
-          }))
-        }
-      } catch (error) {
-        console.error("Excel dosyası okunurken hata:", error)
-        showFeedback("error", "Excel dosyası okunurken hata oluştu", { operation: "Dosya okuma" })
+    setFile(selectedFile)
+
+    try {
+      const data = await selectedFile.arrayBuffer()
+      const workbook = XLSX.read(data)
+      const sheets = workbook.SheetNames
+      setAvailableSheets(sheets)
+
+      // Otomatik olarak ilk sheet'i seç
+      if (sheets.length > 0) {
+        setFormValues((prev) => ({
+          ...prev,
+          sheetName: sheets[0],
+        }))
       }
+    } catch (error) {
+      console.error("Excel dosyası okunurken hata:", error)
+      showFeedback("error", "Excel dosyası okunurken hata oluştu", { operation: "Dosya okuma" })
     }
+  }
 
   // Handle form input changes
   const handleChange = (e) => {
@@ -139,6 +145,8 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     }
   }
 
+
+
   // Handle form submission
   const handleSubmit = async () => {
     // Basic validation
@@ -183,55 +191,54 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
   }
 
   // Error handling
-  // Enhanced error handling
   const handleError = (error) => {
     console.error("Yükleme hatası detayları:", {
       message: error.message,
       response: error.response,
       stack: error.stack,
-      config: error.config
+      config: error.config,
     })
 
     if (error.response) {
       const { status, data } = error.response
-      
+
       if (status === 413) {
-        showFeedback("error", "Dosya boyutu çok büyük! Maksimum 10MB destekleniyor.", { 
+        showFeedback("error", "Dosya boyutu çok büyük! Maksimum 10MB destekleniyor.", {
           operation: "Dosya yükleme",
-          details: data 
+          details: data,
         })
       } else if (status === 401) {
-        showFeedback("error", "Yetkiniz yok, lütfen tekrar giriş yapın", { 
+        showFeedback("error", "Yetkiniz yok, lütfen tekrar giriş yapın", {
           operation: "Dosya yükleme",
-          details: data 
+          details: data,
         })
       } else if (data?.message?.includes("listAlreadyExistMsg")) {
-        showFeedback("error", "Bu liste adı zaten mevcut! Lütfen farklı bir liste adı deneyin.", { 
+        showFeedback("error", "Bu liste adı zaten mevcut! Lütfen farklı bir liste adı deneyin.", {
           operation: "Dosya yükleme",
-          details: data 
+          details: data,
         })
       } else if (data?.errors) {
         // Handle validation errors
         const errorMessages = Object.values(data.errors).join("\n")
-        showFeedback("error", `Doğrulama hataları:\n${errorMessages}`, { 
+        showFeedback("error", `Doğrulama hataları:\n${errorMessages}`, {
           operation: "Dosya yükleme",
-          details: data 
+          details: data,
         })
       } else {
-        showFeedback("error", data?.message || "Beklenmeyen bir hata oluştu", { 
+        showFeedback("error", data?.message || "Beklenmeyen bir hata oluştu", {
           operation: "Dosya yükleme",
-          details: data 
+          details: data,
         })
       }
     } else if (error.request) {
-      showFeedback("error", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.", { 
+      showFeedback("error", "Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.", {
         operation: "Dosya yükleme",
-        details: error.request 
+        details: error.request,
       })
     } else {
-      showFeedback("error", error.message || "Beklenmeyen bir hata oluştu", { 
+      showFeedback("error", error.message || "Beklenmeyen bir hata oluştu", {
         operation: "Dosya yükleme",
-        details: error 
+        details: error,
       })
     }
   }
@@ -243,11 +250,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
       {/* File Input */}
       <div className="space-y-2">
         <label className="block text-sm font-medium">Excel Dosyası</label>
-        <Input 
-          type="file" 
-          accept=".xlsx,.xls" 
-          onChange={handleFileChange} 
-        />
+        <Input type="file" accept=".xlsx,.xls" onChange={handleFileChange} />
       </div>
 
       {/* Basic Information */}
@@ -265,7 +268,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
         <label className="block text-sm font-medium">Sayfa Adı*</label>
         <Select
           value={formValues.sheetName}
-          onValueChange={(value) => setFormValues(prev => ({ ...prev, sheetName: value }))}
+          onValueChange={(value) => setFormValues((prev) => ({ ...prev, sheetName: value }))}
           disabled={availableSheets.length === 0}
         >
           <SelectTrigger>
@@ -327,7 +330,14 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
 
           <div className="space-y-2">
             <label className="block text-sm font-medium">Grup Etiket Sütunu</label>
-            <Input name="aderGroupCol" type="number" min="0" value={formValues.aderGroupCol} onChange={handleChange} />
+            <Input
+              name="aderGroupCol"
+              type="number"
+              min="0"
+              value={formValues.aderGroupCol}
+              onChange={handleChange}
+              disabled={!formValues.aderHasGroup}
+            />
           </div>
 
           <div className="space-y-2">
@@ -443,9 +453,11 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
         </div>
       )}
 
-      <LoadingButton className="w-full py-2" onClick={handleSubmit} isLoading={loading} loadingText="Yükleniyor...">
-        Yükle
-      </LoadingButton>
+      <div className="flex gap-2">
+        <LoadingButton className="flex-1 py-2" onClick={handleSubmit} isLoading={loading} loadingText="Yükleniyor...">
+          Yükle
+        </LoadingButton>
+      </div>
     </div>
   )
 }

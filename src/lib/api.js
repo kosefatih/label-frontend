@@ -22,6 +22,11 @@ export const getLabels = async (customerCode, projectCode, panoCode) => {
   return res.data.data;
 };
 
+export const getLabelList = async (customerCode, projectCode, panoCode, listName) => {
+  const res = await axios.get(`${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}`);
+  return res.data.data;
+};
+
 export const uploadExcel = async (person, customerCode, projectCode, panoCode, file, descModel) => {
   const formData = new FormData();
   
@@ -87,6 +92,20 @@ export const getManipulatedLabels = async (customerCode, projectCode, panoCode, 
   );
   return res.data.data;
 };
+
+// Manipüle edilmiş etiketleri ID'ye göre getir
+export const getManipulatedLabelsbyId = async (customerCode, projectCode, panoCode, listName, applyedListName) => {
+  const res = await axios.get(
+    `${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}/labels/${listName}/manipulated/${applyedListName}`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    },
+  )
+  return res.data.data
+}
+
 
 // Excel dosyasını export et
 export const exportLabelList = async (customerCode, projectCode, panoCode, listName, labelType, applyedListName, settings) => {

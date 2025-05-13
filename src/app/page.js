@@ -15,12 +15,14 @@ import {
   exportLabelList,
   createMultipleDeviceDefines,
   deleteLabelList,
+  getManipulatedLabelsbyId,
+  getLabelList,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
-import { Plus, Trash2, FilePlus, List } from "lucide-react"
+import { Plus, Trash2, FilePlus, List, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AppLayout } from "@/components/app-layout"
@@ -38,6 +40,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import ManipulatedLabelsPreview from "../components/manipulated-labels-preview"
 
 export default function Home() {
   const [customers, setCustomers] = useState([])
@@ -54,7 +57,7 @@ export default function Home() {
   const [selectedManipulatedList, setSelectedManipulatedList] = useState(null)
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [currentExportItem, setCurrentExportItem] = useState(null)
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState({})
   const [exportSettings, setExportSettings] = useState({
     aderBMKExportDetailSettings: {
       fileName: "",
@@ -95,44 +98,87 @@ export default function Home() {
       productNumber: "",
       orderNumber: "",
       producerName: "",
-      producerCode: ""
-    }
-  ]);
-  const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false);
+      producerCode: "",
+    },
+  ])
+  const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false)
   const [repeatCount, setRepeatCount] = useState(1)
   const [exportType, setExportType] = useState("HeadEnd")
-
-
-
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
+  const [previewData, setPreviewData] = useState(null)
 
   const handleOpenExportDialog = (listName, labelType, applyedListName) => {
     setCurrentExportItem({ listName, labelType, applyedListName })
     setExportDialogOpen(true)
   }
 
+const handlePreviewLabels = async (listName, labelType, applyedListName) => {
+  try {
+    // Sadece AderBMK tipi için çalışsın
+    if (labelType !== "AderBMK") {
+      showFeedback("warning", "Önizleme sadece AderBMK etiketleri için kullanılabilir", { 
+        operation: "Önizleme" 
+      });
+      return;
+    }
+
+    setLoading(true);
+    
+    // Hem orijinal hem de manipüle edilmiş etiketleri al
+    const [originalData, manipulatedData] = await Promise.all([
+      getLabelList(selectedCustomer.code, selectedProject.code, selectedPano.code, listName),
+      getManipulatedLabelsbyId(
+        selectedCustomer.code,
+        selectedProject.code,
+        selectedPano.code,
+        listName,
+        applyedListName
+      )
+    ]);
+
+    setPreviewData({
+      customerName: selectedCustomer.name,
+      projectName: selectedProject.name,
+      panoName: selectedPano.name,
+      listName,
+      applyListName: applyedListName,
+      labelType,
+      labels: manipulatedData.labels,
+      originalLabels: originalData.labels
+    });
+    
+    setPreviewDialogOpen(true);
+  } catch (error) {
+    showFeedback("error", error.response?.data?.message || error.message, { 
+      operation: "Önizleme yükleme" 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeviceDefineChange = (index, field, value) => {
     // Eğer field 'eplanId' ise ve '/' içeriyorsa hata ayarla
-    if (field === 'eplanId' && value.includes('/')) {
-      setErrors(prev => ({
+    if (field === "eplanId" && value.includes("/")) {
+      setErrors((prev) => ({
         ...prev,
-        [index]: "Eplan ID'de '/' karakteri kullanılamaz"
-      }));
+        [index]: "Eplan ID'de '/' karakteri kullanılamaz",
+      }))
     } else {
       // Hata yoksa hata mesajını temizle
-      setErrors(prev => {
-        const newErrors = {...prev};
-        delete newErrors[index];
-        return newErrors;
-      });
+      setErrors((prev) => {
+        const newErrors = { ...prev }
+        delete newErrors[index]
+        return newErrors
+      })
     }
-  
+
     // State'i güncelle
-    const updatedDefines = [...deviceDefines];
-    updatedDefines[index][field] = value;
-    setDeviceDefines(updatedDefines);
-  };
-  
+    const updatedDefines = [...deviceDefines]
+    updatedDefines[index][field] = value
+    setDeviceDefines(updatedDefines)
+  }
+
   const addNewDeviceDefineRow = () => {
     setDeviceDefines([
       ...deviceDefines,
@@ -142,83 +188,85 @@ export default function Home() {
         productNumber: "",
         orderNumber: "",
         producerName: "",
-        producerCode: ""
-      }
-    ]);
-  };
-  
+        producerCode: "",
+      },
+    ])
+  }
+
   const removeDeviceDefineRow = (index) => {
-    if (deviceDefines.length <= 1) return;
-    const newDefines = [...deviceDefines];
-    newDefines.splice(index, 1);
-    setDeviceDefines(newDefines);
-  };
-  
+    if (deviceDefines.length <= 1) return
+    const newDefines = [...deviceDefines]
+    newDefines.splice(index, 1)
+    setDeviceDefines(newDefines)
+  }
+
   const handleSubmitDeviceDefines = async () => {
     // 1. Validasyon işlemleri
-    const validationErrors = {};
-    let hasError = false;
-  
+    const validationErrors = {}
+    let hasError = false
+
     deviceDefines.forEach((define, index) => {
       // Eplan ID'de '/' kontrolü
-      if (define.eplanId.includes('/')) {
-        validationErrors[index] = "Eplan ID'de '/' karakteri kullanılamaz";
-        hasError = true;
+      if (define.eplanId.includes("/")) {
+        validationErrors[index] = "Eplan ID'de '/' karakteri kullanılamaz"
+        hasError = true
       }
-      
+
       // Eplan ID boş mu kontrolü (opsiyonel)
       if (!define.eplanId.trim()) {
-        validationErrors[index] = validationErrors[index] || "Eplan ID zorunludur";
-        hasError = true;
+        validationErrors[index] = validationErrors[index] || "Eplan ID zorunludur"
+        hasError = true
       }
-    });
-  
+    })
+
     // 2. Hata varsa işlemi durdur
     if (hasError) {
-      setErrors(validationErrors);
-      
+      setErrors(validationErrors)
+
       // İlk hatalı alana odaklan ve scroll et
-      const firstErrorIndex = Object.keys(validationErrors)[0];
+      const firstErrorIndex = Object.keys(validationErrors)[0]
       if (firstErrorIndex) {
-        const element = document.getElementById(`eplanId-${firstErrorIndex}`);
+        const element = document.getElementById(`eplanId-${firstErrorIndex}`)
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.focus();
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+          element.focus()
         }
       }
-      
-      showFeedback("error", "Lütfen formdaki hataları düzeltin", { operation: "Cihaz tanımları ekleme" });
-      return;
+
+      showFeedback("error", "Lütfen formdaki hataları düzeltin", { operation: "Cihaz tanımları ekleme" })
+      return
     }
-  
+
     // 3. Validasyon başarılıysa API isteğini yap
     try {
-      setLoading(true);
-      await createMultipleDeviceDefines(deviceDefines);
-      
+      setLoading(true)
+      await createMultipleDeviceDefines(deviceDefines)
+
       // 4. Başarılı durumda formu resetle
-      showFeedback("success", "Cihaz tanımları başarıyla eklendi", { 
-        operation: "Cihaz tanımları ekleme" 
-      });
-      setShowDeviceDefineDialog(false);
-      setDeviceDefines([{
-        eplanId: "",
-        category: "",
-        productNumber: "",
-        orderNumber: "",
-        producerName: "",
-        producerCode: ""
-      }]);
-      setErrors({}); // Hataları temizle
+      showFeedback("success", "Cihaz tanımları başarıyla eklendi", {
+        operation: "Cihaz tanımları ekleme",
+      })
+      setShowDeviceDefineDialog(false)
+      setDeviceDefines([
+        {
+          eplanId: "",
+          category: "",
+          productNumber: "",
+          orderNumber: "",
+          producerName: "",
+          producerCode: "",
+        },
+      ])
+      setErrors({}) // Hataları temizle
     } catch (error) {
       // 5. Hata durumunda kullanıcıyı bilgilendir
-      showFeedback("error", error.response?.data?.message || error.message, { 
-        operation: "Cihaz tanımları ekleme" 
-      });
+      showFeedback("error", error.response?.data?.message || error.message, {
+        operation: "Cihaz tanımları ekleme",
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const parseLabelError = (error) => {
     if (!error.response?.data) return null
@@ -354,7 +402,7 @@ export default function Home() {
       showFeedback("warning", "Lütfen bir kural seti seçin", { operation: "Kural uygulama" })
       return
     }
-  
+
     try {
       setLoading(true)
       const result = await applyRuleToLabel(
@@ -370,14 +418,14 @@ export default function Home() {
       let errorMessage = error.message
       let errorDetails = null
       let productList = null
-  
+
       if (error.response?.data) {
         try {
-          const errorData = typeof error.response.data === "string" ? 
-            JSON.parse(error.response.data) : error.response.data
-  
+          const errorData =
+            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+
           const messageParts = errorData.Message?.split("&-&") || []
-  
+
           errorDetails = {
             status: errorData.Status || error.response.status,
             mainMessage: messageParts[0]?.trim() || errorData.Message,
@@ -385,35 +433,33 @@ export default function Home() {
             repository: messageParts[2]?.replace("İstek gönderilen repository:", "").trim(),
             exceptionType: errorData.Data,
           }
-  
+
           if (messageParts[3]) {
             productList = messageParts[3]
               .replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
               .split("\n")
               .filter((p) => p.trim())
           }
-  
+
           errorMessage = errorDetails.mainMessage
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
       }
-  
+
       // Kullanıcıya göster
       showFeedback("error", errorMessage, {
         operation: "Kural uygulama",
         products: productList,
         errorDetails: {
           ...errorDetails,
-          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`
-        }
+          technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`,
+        },
       })
     } finally {
       setLoading(false)
     }
   }
-
-
 
   // Manipüle edilmiş listeleri getir
   const handleGetManipulatedLabels = async (listName) => {
@@ -424,14 +470,14 @@ export default function Home() {
     } catch (error) {
       let errorMessage = error.message
       let errorDetails = null
-  
+
       if (error.response?.data) {
         try {
           const errorData =
             typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
-  
+
           const messageParts = errorData.Message?.split("&-&") || []
-  
+
           errorDetails = {
             status: errorData.Status || error.response.status,
             mainMessage: messageParts[0]?.trim() || errorData.Message,
@@ -445,19 +491,19 @@ export default function Home() {
               .trim(),
             exceptionType: errorData.Data,
           }
-  
+
           errorMessage = errorDetails.mainMessage
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
       }
-  
+
       // Console log
       console.groupCollapsed("%cAPI Error Details", "color: red; font-weight: bold;")
       console.error("Endpoint:", `${error.config?.method?.toUpperCase()} ${error.config?.url}`)
       console.error("Status:", error.response?.status || "No response")
       console.error("Message:", errorMessage)
-  
+
       if (errorDetails) {
         console.group("Error Details")
         console.log("Module:", errorDetails.module)
@@ -465,10 +511,10 @@ export default function Home() {
         console.log("Exception:", errorDetails.exceptionType)
         console.groupEnd()
       }
-  
+
       console.log("Full error object:", error)
       console.groupEnd()
-  
+
       showFeedback("error", errorMessage, {
         operation: "Liste yükleme",
         errorDetails: {
@@ -481,8 +527,6 @@ export default function Home() {
       setLoading(false)
     }
   }
-  
-
 
   // Excel dosyasını indir
   const handleExportLabels = async (listName, labelType, applyedListName, customSettings = null) => {
@@ -527,31 +571,24 @@ export default function Home() {
 
   const handleDeleteLabel = async (listName) => {
     try {
-      setLoading(true);
-  
-      await deleteLabelList(
-        selectedCustomer.code,
-        selectedProject.code,
-        selectedPano.code,
-        listName
-      );
-  
-      showFeedback("success", `${listName} listesi başarıyla silindi`, { operation: "Liste silme" });
-  
+      setLoading(true)
+
+      await deleteLabelList(selectedCustomer.code, selectedProject.code, selectedPano.code, listName)
+
+      showFeedback("success", `${listName} listesi başarıyla silindi`, { operation: "Liste silme" })
+
       const updatedLabels = await getLabels(
         selectedCustomer.customerCode,
         selectedProject.projectCode,
-        selectedPano.panoCode
-      );
-      setLabels(updatedLabels);
-  
+        selectedPano.panoCode,
+      )
+      setLabels(updatedLabels)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste silme" });
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Liste silme" })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-  
+  }
 
   // Kural uygula ve çıktı al
   const handleApplyAndExport = async (listName, labelType) => {
@@ -721,22 +758,13 @@ export default function Home() {
 
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
-    <Button 
-      variant="outline" 
-      className="mb-4"
-      onClick={() => setShowDeviceDefineDialog(true)}
-    >
-      Cihaz Tanımları Ekle
-    </Button>
-    <Button 
-      variant="outline" 
-      asChild
-    >
-      <Link href="/rules">
-        Kurallar
-      </Link>
-    </Button>
-    
+      <Button variant="outline" className="mb-4" onClick={() => setShowDeviceDefineDialog(true)}>
+        Cihaz Tanımları Ekle
+      </Button>
+      <Button variant="outline" asChild>
+        <Link href="/rules">Kurallar</Link>
+      </Button>
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Müşteriler */}
         <UICard
@@ -846,13 +874,13 @@ export default function Home() {
         <UICard title="Etiketler">
           {selectedPano && labels && (
             <div className="space-y-4">
-              {/* Ader BMKs */}
-              {labels.aderBMKs?.length > 0 && (
-                <div className="bg-gray-50 p-3 rounded">
-                  <h3 className="font-medium text-blue-600">Ader BMKs</h3>
-                  <ul className="mt-2 space-y-3">
-                    {labels.aderBMKs.map((group, i) => (
-                      <li key={i} className="space-y-2">
+            {/* Ader BMKs kısmında */}
+            {labels.aderBMKs?.length > 0 && (
+              <div className="bg-gray-50 p-3 rounded">
+                <h3 className="font-medium text-blue-600">Ader BMKs</h3>
+                <ul className="mt-2 space-y-3">
+                  {labels.aderBMKs.map((group, i) => (
+                    <li key={i} className="space-y-2">
                         <div className="flex justify-between items-center">
                           <p className="font-medium">{group.listName}</p>
                           <span className="text-sm text-gray-500">{group.listRowCount} kayıt</span>
@@ -872,7 +900,9 @@ export default function Home() {
                                   confirmText="Kuralı Uygula"
                                 >
                                   <div className="space-y-4">
-                                    <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
+                                    <p className="text-sm text-gray-600">
+                                      {group.listName} listesi için kural seti seçin
+                                    </p>
                                     <Select
                                       onValueChange={(value) =>
                                         setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -917,23 +947,39 @@ export default function Home() {
                                   confirmText="Listeyi Yenile"
                                   closeOnConfirm={false}
                                 >
-                                    {loading ? (
-                                      <div className="flex justify-center py-8">
-                                        <p>Yükleniyor...</p>
-                                      </div>
-                                    ) : manipulatedLists.length > 0 ? (
-                                      <div className="space-y-3">
-                                        {manipulatedLists.map((list, index) => (
-                                          <div
-                                            key={index}
-                                            className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
-                                          >
-                                            <div className="flex-1 min-w-0">
-                                              <p className="font-medium truncate">{list.applyedListName}</p>
-                                              <p className="text-sm text-gray-600 truncate">
-                                                {list.labelType} - {list.listRowCount} kayıt
-                                              </p>
-                                            </div>
+                                  {loading ? (
+                                    <div className="flex justify-center py-8">
+                                      <p>Yükleniyor...</p>
+                                    </div>
+                                  ) : manipulatedLists.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {manipulatedLists.map((list, index) => (
+                                        <div
+                                          key={index}
+                                          className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{list.applyedListName}</p>
+                                            <p className="text-sm text-gray-600 truncate">
+                                              {list.labelType} - {list.listRowCount} kayıt
+                                            </p>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {list.labelType === "AderBMK" && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                  handlePreviewLabels(
+                                                    group.listName,
+                                                    list.labelType,
+                                                    list.applyedListName,
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" /> Önizle
+                                              </Button>
+                                            )}
                                             <Button
                                               size="sm"
                                               onClick={() => {
@@ -942,10 +988,18 @@ export default function Home() {
                                                   labelType: list.labelType,
                                                   applyedListName: list.applyedListName,
                                                   defaultRepeatCount:
-                                                    list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                    list.labelType === "DeviceBMK"
+                                                      ? 0
+                                                      : list.labelType === "AderBMK"
+                                                        ? 4
+                                                        : 1,
                                                 })
                                                 setRepeatCount(
-                                                  list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                  list.labelType === "DeviceBMK"
+                                                    ? 0
+                                                    : list.labelType === "AderBMK"
+                                                      ? 4
+                                                      : 1,
                                                 )
                                                 setExportDialogOpen(true)
                                               }}
@@ -953,14 +1007,15 @@ export default function Home() {
                                               Çıktı Al
                                             </Button>
                                           </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="py-4 text-center text-gray-500">
-                                        <p>Manipüle edilmiş liste bulunamadı</p>
-                                      </div>
-                                    )}
-                              </FeedbackDialog>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="py-4 text-center text-gray-500">
+                                      <p>Manipüle edilmiş liste bulunamadı</p>
+                                    </div>
+                                  )}
+                                </FeedbackDialog>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Listele</p>
@@ -1028,7 +1083,9 @@ export default function Home() {
                                   confirmText="Kuralı Uygula"
                                 >
                                   <div className="space-y-4">
-                                    <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
+                                    <p className="text-sm text-gray-600">
+                                      {group.listName} listesi için kural seti seçin
+                                    </p>
                                     <Select
                                       onValueChange={(value) =>
                                         setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -1057,65 +1114,81 @@ export default function Home() {
 
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <FeedbackDialog
-                                  title="Manipüle Edilmiş Listeler"
-                                  trigger={
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      className="h-8 px-2"
-                                      onClick={() => handleGetManipulatedLabels(group.listName)}
-                                    >
-                                      <List className="h-4 w-4" />
-                                    </Button>
-                                  }
-                                  onConfirm={() => handleGetManipulatedLabels(group.listName)}
-                                  confirmText="Listeyi Yenile"
-                                  closeOnConfirm={false}
+                            <FeedbackDialog
+                              title="Manipüle Edilmiş Listeler"
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 px-2"
+                                  onClick={() => handleGetManipulatedLabels(group.listName)}
                                 >
-                                    {loading ? (
-                                      <div className="flex justify-center py-8">
-                                        <p>Yükleniyor...</p>
+                                  <List className="h-4 w-4" />
+                                </Button>
+                              }
+                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                              confirmText="Listeyi Yenile"
+                              closeOnConfirm={false}
+                            >
+                              {loading ? (
+                                <div className="flex justify-center py-8">
+                                  <p>Yükleniyor...</p>
+                                </div>
+                              ) : manipulatedLists.length > 0 ? (
+                                <div className="space-y-3">
+                                  {manipulatedLists.map((list, index) => (
+                                    <div
+                                      key={index}
+                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                    >
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{list.applyedListName}</p>
+                                        <p className="text-sm text-gray-600 truncate">
+                                          {list.labelType} - {list.listRowCount} kayıt
+                                        </p>
                                       </div>
-                                    ) : manipulatedLists.length > 0 ? (
-                                      <div className="space-y-3">
-                                        {manipulatedLists.map((list, index) => (
-                                          <div
-                                            key={index}
-                                            className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                      <div className="flex gap-2">
+                                        {/* Sadece AderBMK tipi için önizleme butonunu göster */}
+                                        {list.labelType === "AderBMK" && (
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() =>
+                                              handlePreviewLabels(
+                                                group.listName,
+                                                list.labelType,
+                                                list.applyedListName
+                                              )
+                                            }
                                           >
-                                            <div className="flex-1 min-w-0">
-                                              <p className="font-medium truncate">{list.applyedListName}</p>
-                                              <p className="text-sm text-gray-600 truncate">
-                                                {list.labelType} - {list.listRowCount} kayıt
-                                              </p>
-                                            </div>
-                                            <Button
-                                              size="sm"
-                                              onClick={() => {
-                                                setCurrentExportItem({
-                                                  listName: group.listName,
-                                                  labelType: list.labelType,
-                                                  applyedListName: list.applyedListName,
-                                                  defaultRepeatCount:
-                                                    list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
-                                                })
-                                                setRepeatCount(
-                                                  list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
-                                                )
-                                                setExportDialogOpen(true)
-                                              }}
-                                            >
-                                              Çıktı Al
-                                            </Button>
-                                          </div>
-                                        ))}
+                                            <Eye className="h-4 w-4 mr-1" /> Önizle
+                                          </Button>
+                                        )}
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            setCurrentExportItem({
+                                              listName: group.listName,
+                                              labelType: list.labelType,
+                                              applyedListName: list.applyedListName,
+                                              defaultRepeatCount: list.labelType === "AderBMK" ? 4 : 1,
+                                            })
+                                            setRepeatCount(list.labelType === "AderBMK" ? 4 : 1)
+                                            setExportDialogOpen(true)
+                                          }}
+                                        >
+                                          Çıktı Al
+                                        </Button>
                                       </div>
-                                    ) : (
-                                      <div className="py-4 text-center text-gray-500">
-                                        <p>Manipüle edilmiş liste bulunamadı</p>
-                                      </div>
-                                    )}                                </FeedbackDialog>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="py-4 text-center text-gray-500">
+                                  <p>Manipüle edilmiş liste bulunamadı</p>
+                                </div>
+                              )}
+                            </FeedbackDialog>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Listele</p>
@@ -1183,7 +1256,9 @@ export default function Home() {
                                   confirmText="Kuralı Uygula"
                                 >
                                   <div className="space-y-4">
-                                    <p className="text-sm text-gray-600">{group.listName} listesi için kural seti seçin</p>
+                                    <p className="text-sm text-gray-600">
+                                      {group.listName} listesi için kural seti seçin
+                                    </p>
                                     <Select
                                       onValueChange={(value) =>
                                         setSelectedRuleSet(ruleSets.find((r) => r.id === Number.parseInt(value)))
@@ -1228,23 +1303,39 @@ export default function Home() {
                                   confirmText="Listeyi Yenile"
                                   closeOnConfirm={false}
                                 >
-                                    {loading ? (
-                                      <div className="flex justify-center py-8">
-                                        <p>Yükleniyor...</p>
-                                      </div>
-                                    ) : manipulatedLists.length > 0 ? (
-                                      <div className="space-y-3">
-                                        {manipulatedLists.map((list, index) => (
-                                          <div
-                                            key={index}
-                                            className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
-                                          >
-                                            <div className="flex-1 min-w-0">
-                                              <p className="font-medium truncate">{list.applyedListName}</p>
-                                              <p className="text-sm text-gray-600 truncate">
-                                                {list.labelType} - {list.listRowCount} kayıt
-                                              </p>
-                                            </div>
+                                  {loading ? (
+                                    <div className="flex justify-center py-8">
+                                      <p>Yükleniyor...</p>
+                                    </div>
+                                  ) : manipulatedLists.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {manipulatedLists.map((list, index) => (
+                                        <div
+                                          key={index}
+                                          className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{list.applyedListName}</p>
+                                            <p className="text-sm text-gray-600 truncate">
+                                              {list.labelType} - {list.listRowCount} kayıt
+                                            </p>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {list.labelType === "AderBMK" && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                  handlePreviewLabels(
+                                                    group.listName,
+                                                    list.labelType,
+                                                    list.applyedListName,
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" /> Önizle
+                                              </Button>
+                                            )}
                                             <Button
                                               size="sm"
                                               onClick={() => {
@@ -1253,10 +1344,18 @@ export default function Home() {
                                                   labelType: list.labelType,
                                                   applyedListName: list.applyedListName,
                                                   defaultRepeatCount:
-                                                    list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                    list.labelType === "DeviceBMK"
+                                                      ? 0
+                                                      : list.labelType === "AderBMK"
+                                                        ? 4
+                                                        : 1,
                                                 })
                                                 setRepeatCount(
-                                                  list.labelType === "DeviceBMK" ? 0 : list.labelType === "AderBMK" ? 4 : 1,
+                                                  list.labelType === "DeviceBMK"
+                                                    ? 0
+                                                    : list.labelType === "AderBMK"
+                                                      ? 4
+                                                      : 1,
                                                 )
                                                 setExportDialogOpen(true)
                                               }}
@@ -1264,13 +1363,14 @@ export default function Home() {
                                               Çıktı Al
                                             </Button>
                                           </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div className="py-4 text-center text-gray-500">
-                                        <p>Manipüle edilmiş liste bulunamadı</p>
-                                      </div>
-                                    )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="py-4 text-center text-gray-500">
+                                      <p>Manipüle edilmiş liste bulunamadı</p>
+                                    </div>
+                                  )}
                                 </FeedbackDialog>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -1330,14 +1430,20 @@ export default function Home() {
                       </Label>
                       <Input
                         id="fileName"
-                        value={exportSettings.aderBMKExportDetailSettings.fileName || currentExportItem?.applyedListName || ""}
-                        onChange={(e) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            fileName: e.target.value
-                          }
-                        })}
+                        value={
+                          exportSettings.aderBMKExportDetailSettings.fileName ||
+                          currentExportItem?.applyedListName ||
+                          ""
+                        }
+                        onChange={(e) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              fileName: e.target.value,
+                            },
+                          })
+                        }
                         className="col-span-3"
                       />
                     </div>
@@ -1351,13 +1457,15 @@ export default function Home() {
                         type="number"
                         min="0"
                         value={exportSettings.aderBMKExportDetailSettings.repeatCount}
-                        onChange={(e) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            repeatCount: Number(e.target.value)
-                          }
-                        })}
+                        onChange={(e) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              repeatCount: Number(e.target.value),
+                            },
+                          })
+                        }
                         className="col-span-3"
                       />
                     </div>
@@ -1371,13 +1479,15 @@ export default function Home() {
                         type="number"
                         min="1"
                         value={exportSettings.aderBMKExportDetailSettings.labelRowCount}
-                        onChange={(e) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            labelRowCount: Number(e.target.value)
-                          }
-                        })}
+                        onChange={(e) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              labelRowCount: Number(e.target.value),
+                            },
+                          })
+                        }
                         className="col-span-3"
                       />
                     </div>
@@ -1386,15 +1496,17 @@ export default function Home() {
                       <Label htmlFor="exportType" className="text-right">
                         Export Tipi
                       </Label>
-                      <Select 
-                        value={exportSettings.aderBMKExportDetailSettings.exportType} 
-                        onValueChange={(value) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            exportType: value
-                          }
-                        })}
+                      <Select
+                        value={exportSettings.aderBMKExportDetailSettings.exportType}
+                        onValueChange={(value) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              exportType: value,
+                            },
+                          })
+                        }
                       >
                         <SelectTrigger className="col-span-3">
                           <SelectValue placeholder="Export tipi seçin" />
@@ -1414,13 +1526,15 @@ export default function Home() {
                       <Switch
                         id="hasIdentifierColumn"
                         checked={exportSettings.aderBMKExportDetailSettings.hasIdentifierColumn}
-                        onCheckedChange={(checked) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            hasIdentifierColumn: checked
-                          }
-                        })}
+                        onCheckedChange={(checked) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              hasIdentifierColumn: checked,
+                            },
+                          })
+                        }
                       />
                     </div>
 
@@ -1431,13 +1545,15 @@ export default function Home() {
                       <Switch
                         id="spaceAvaliable"
                         checked={exportSettings.aderBMKExportDetailSettings.spaceAvaliable}
-                        onCheckedChange={(checked) => setExportSettings({
-                          ...exportSettings,
-                          aderBMKExportDetailSettings: {
-                            ...exportSettings.aderBMKExportDetailSettings,
-                            spaceAvaliable: checked
-                          }
-                        })}
+                        onCheckedChange={(checked) =>
+                          setExportSettings({
+                            ...exportSettings,
+                            aderBMKExportDetailSettings: {
+                              ...exportSettings.aderBMKExportDetailSettings,
+                              spaceAvaliable: checked,
+                            },
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -1452,17 +1568,17 @@ export default function Home() {
                           deviceBMKExportSettings: {
                             fileName: currentExportItem?.applyedListName || "",
                             repeatCount: currentExportItem?.labelType === "DeviceBMK" ? repeatCount : 0,
-                          }
-                        };
+                          },
+                        }
 
                         handleExportLabels(
                           currentExportItem.listName,
                           currentExportItem.labelType,
                           currentExportItem.applyedListName,
                           finalExportSettings,
-                        );
+                        )
 
-                        setExportDialogOpen(false);
+                        setExportDialogOpen(false)
                       }}
                     >
                       Çıktı Al
@@ -1494,7 +1610,7 @@ export default function Home() {
               Aşağıdaki formu kullanarak birden fazla cihaz tanımı ekleyebilirsiniz.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 max-h-[70vh] overflow-y-auto p-2">
             {deviceDefines.map((define, index) => (
               <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
@@ -1505,18 +1621,16 @@ export default function Home() {
                     <Input
                       id={`eplanId-${index}`}
                       value={define.eplanId}
-                      onChange={(e) => handleDeviceDefineChange(index, 'eplanId', e.target.value)}
-                      className={`w-full h-10 ${errors[index] ? 'border-red-500' : ''}`}
+                      onChange={(e) => handleDeviceDefineChange(index, "eplanId", e.target.value)}
+                      className={`w-full h-10 ${errors[index] ? "border-red-500" : ""}`}
                     />
-                    {errors[index] && (
-                      <p className="text-red-500 text-sm">{errors[index]}</p>
-                    )}
+                    {errors[index] && <p className="text-red-500 text-sm">{errors[index]}</p>}
                   </div>
                   <div className="space-y-1">
                     <Label>Kategori</Label>
                     <Input
                       value={define.category}
-                      onChange={(e) => handleDeviceDefineChange(index, 'category', e.target.value)}
+                      onChange={(e) => handleDeviceDefineChange(index, "category", e.target.value)}
                       className="w-full h-10"
                     />
                   </div>
@@ -1528,7 +1642,7 @@ export default function Home() {
                     <Label>Ürün Numarası</Label>
                     <Input
                       value={define.productNumber}
-                      onChange={(e) => handleDeviceDefineChange(index, 'productNumber', e.target.value)}
+                      onChange={(e) => handleDeviceDefineChange(index, "productNumber", e.target.value)}
                       className="w-full h-10"
                     />
                   </div>
@@ -1536,7 +1650,7 @@ export default function Home() {
                     <Label>Sipariş Numarası</Label>
                     <Input
                       value={define.orderNumber}
-                      onChange={(e) => handleDeviceDefineChange(index, 'orderNumber', e.target.value)}
+                      onChange={(e) => handleDeviceDefineChange(index, "orderNumber", e.target.value)}
                       className="w-full h-10"
                     />
                   </div>
@@ -1548,7 +1662,7 @@ export default function Home() {
                     <Label>Üretici Adı</Label>
                     <Input
                       value={define.producerName}
-                      onChange={(e) => handleDeviceDefineChange(index, 'producerName', e.target.value)}
+                      onChange={(e) => handleDeviceDefineChange(index, "producerName", e.target.value)}
                       className="w-full h-10"
                     />
                   </div>
@@ -1557,12 +1671,12 @@ export default function Home() {
                     <div className="flex gap-2">
                       <Input
                         value={define.producerCode}
-                        onChange={(e) => handleDeviceDefineChange(index, 'producerCode', e.target.value)}
+                        onChange={(e) => handleDeviceDefineChange(index, "producerCode", e.target.value)}
                         className="flex-1 h-10"
                       />
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
+                      <Button
+                        variant="outline"
+                        size="icon"
                         onClick={() => removeDeviceDefineRow(index)}
                         disabled={deviceDefines.length <= 1}
                         className="h-10 w-10"
@@ -1574,37 +1688,43 @@ export default function Home() {
                 </div>
               </div>
             ))}
-            
-            <Button 
-              variant="outline" 
-              onClick={addNewDeviceDefineRow}
-              className="h-12 text-md w-full"
-            >
+
+            <Button variant="outline" onClick={addNewDeviceDefineRow} className="h-12 text-md w-full">
               <Plus className="mr-2 h-5 w-5" /> Yeni Satır Ekle
             </Button>
           </div>
-          
+
           <DialogFooter className="px-2 py-4 border-t">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
-                setErrors({});
-                setShowDeviceDefineDialog(false);
+                setErrors({})
+                setShowDeviceDefineDialog(false)
               }}
               className="h-12 px-6"
             >
               İptal
             </Button>
-            <LoadingButton 
-              isLoading={loading} 
-              onClick={handleSubmitDeviceDefines}
-              className="h-12 px-6 text-md"
-            >
+            <LoadingButton isLoading={loading} onClick={handleSubmitDeviceDefines} className="h-12 px-6 text-md">
               Kaydet
             </LoadingButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {previewData && (
+        <ManipulatedLabelsPreview
+          customerName={previewData.customerName}
+          projectName={previewData.projectName}
+          panoName={previewData.panoName}
+          listName={previewData.listName}
+          applyListName={previewData.applyListName}
+          labelType={previewData.labelType}
+          labels={previewData.labels}
+          originalLabels={previewData.originalLabels}
+          isOpen={previewDialogOpen}
+          onClose={() => setPreviewDialogOpen(false)}
+        />
+      )}
     </AppLayout>
   )
 }
