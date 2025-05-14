@@ -9,8 +9,6 @@ import { LoadingButton } from "./loading-button"
 import * as XLSX from "xlsx"
 import { Button } from "@/components/ui/button"
 import { Eye } from "lucide-react"
-import ExcelPreviewHandler from "./excel-preview-handler"
-import ManipulatedLabelsPreview from "./manipulated-labels-preview"
 
 const UploadForm = ({ customerCode, projectCode, panoCode }) => {
   // Form state
@@ -24,8 +22,9 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     type: 3,
     // AderBMK
     aderHasGroup: false,
-    aderGroupCol: 0,
+    aderGroupCol: 4,
     aderLabelCols: "0,2",
+    aderRotates: "1,3",
     // KlemensBMK
     klemensHasGroup: true,
     klemensGroupCol: 0,
@@ -89,6 +88,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
       aderHasGroup,
       aderGroupCol,
       aderLabelCols,
+      aderRotates,
       klemensHasGroup,
       klemensGroupCol,
       klemensLabelCols,
@@ -114,6 +114,13 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
         LabelColumns:
           type === 1 && aderLabelCols
             ? aderLabelCols
+                .split(",")
+                .map(Number)
+                .filter((n) => !isNaN(n))
+            : [],
+        Rotates:
+          type === 1 && aderRotates
+            ? aderRotates
                 .split(",")
                 .map(Number)
                 .filter((n) => !isNaN(n))
@@ -346,6 +353,17 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
               name="aderLabelCols"
               placeholder="Örnek: 0,2"
               value={formValues.aderLabelCols}
+              onChange={handleChange}
+            />
+          </div>
+
+          {/* Yeni eklenen Rotates alanı */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium">Döndürülecek Sütunlar (virgülle ayırın)</label>
+            <Input
+              name="aderRotates"
+              placeholder="Örnek: 1,3"
+              value={formValues.aderRotates}
               onChange={handleChange}
             />
           </div>
