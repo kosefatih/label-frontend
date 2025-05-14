@@ -893,7 +893,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                   title="Kural Seti Seçin"
                                   trigger={
                                     <Button size="sm" variant="outline" className="h-8 px-2">
-                                      <FilePlus className="h-4 w-4" />
+                                      Kural Uygula
                                     </Button>
                                   }
                                   onConfirm={() => handleApplyRule(group.listName, "AderBMK")}
@@ -940,7 +940,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                       className="h-8 px-2"
                                       onClick={() => handleGetManipulatedLabels(group.listName)}
                                     >
-                                      <List className="h-4 w-4" />
+                                      Export
                                     </Button>
                                   }
                                   onConfirm={() => handleGetManipulatedLabels(group.listName)}
@@ -1076,7 +1076,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                   title="Kural Seti Seçin"
                                   trigger={
                                     <Button size="sm" variant="outline" className="h-8 px-2">
-                                      <FilePlus className="h-4 w-4" />
+                                      Kural Uygula
                                     </Button>
                                   }
                                   onConfirm={() => handleApplyRule(group.listName, "KlemensBMK")}
@@ -1123,7 +1123,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                   className="h-8 px-2"
                                   onClick={() => handleGetManipulatedLabels(group.listName)}
                                 >
-                                  <List className="h-4 w-4" />
+                                  Export
                                 </Button>
                               }
                               onConfirm={() => handleGetManipulatedLabels(group.listName)}
@@ -1249,7 +1249,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                   title="Kural Seti Seçin"
                                   trigger={
                                     <Button size="sm" variant="outline" className="h-8 px-2">
-                                      <FilePlus className="h-4 w-4" />
+                                      Kural Uygula
                                     </Button>
                                   }
                                   onConfirm={() => handleApplyRule(group.listName, "DeviceBMK")}
@@ -1296,7 +1296,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                       className="h-8 px-2"
                                       onClick={() => handleGetManipulatedLabels(group.listName)}
                                     >
-                                      <List className="h-4 w-4" />
+                                      Export
                                     </Button>
                                   }
                                   onConfirm={() => handleGetManipulatedLabels(group.listName)}

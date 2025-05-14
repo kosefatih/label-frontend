@@ -18,7 +18,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
   const [formValues, setFormValues] = useState({
     listName: "",
     sheetName: "",
-    startRow: 2,
+    startRow: 1,
     type: 3,
     // AderBMK
     aderHasGroup: false,
@@ -39,9 +39,6 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     deviceMerged: 2,
     deviceProduct: 4,
   })
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
-  const [previewData, setPreviewData] = useState(null)
-  const [processingPreview, setProcessingPreview] = useState(false)
 
   // Handle file selection and read sheet names
   const handleFileChange = async (e) => {
@@ -359,7 +356,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
 
           {/* Yeni eklenen Rotates alanı */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium">Döndürülecek Sütunlar (virgülle ayırın)</label>
+            <label className="block text-sm font-medium">Döndürme Sütunları (virgülle ayırın)</label>
             <Input
               name="aderRotates"
               placeholder="Örnek: 1,3"
