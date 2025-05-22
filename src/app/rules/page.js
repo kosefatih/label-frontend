@@ -8,29 +8,16 @@ import {
   getRuleTypes,
   addRuleToRuleSet,
   deleteRule,
+  updateRuleSet,
 } from "../../lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AppLayout } from "@/components/app-layout"
-import { LoadingButton } from "@/components/loading-button"
 import { FeedbackDialog } from "@/components/feedback-dialog"
 import { showFeedback } from "@/lib/feedback"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function RulesPage() {
   const [ruleSets, setRuleSets] = useState([])
@@ -43,6 +30,7 @@ export default function RulesPage() {
     description: "",
     labelType: 1,
   })
+  const [editRuleSet, setEditRuleSet] = useState(null)
   const [newRule, setNewRule] = useState({
     type: "",
     param1: "",
@@ -60,9 +48,9 @@ export default function RulesPage() {
       const data = await getRuleSets()
       setRuleSets(data)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural setleri yükleme",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -76,9 +64,9 @@ export default function RulesPage() {
       const data = await getRuleTypes()
       setRuleTypes(data)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural tipleri yükleme",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -93,9 +81,9 @@ export default function RulesPage() {
       const data = await getRuleSetById(ruleSet.id)
       setRules(data.rules || [])
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kurallar yükleme",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -107,8 +95,8 @@ export default function RulesPage() {
     try {
       setLoading(true)
       const response = await createRuleSet(newRuleSet)
-      showFeedback("success", response.message || "Kural seti oluşturuldu", { 
-        operation: "Kural seti oluşturma" 
+      showFeedback("success", response.message || "Kural seti oluşturuldu", {
+        operation: "Kural seti oluşturma",
       })
       await loadRuleSets()
       setNewRuleSet({
@@ -117,9 +105,35 @@ export default function RulesPage() {
         labelType: 1,
       })
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural seti oluşturma",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Update RuleSet
+  const handleUpdateRuleSet = async () => {
+    if (!editRuleSet) return
+    try {
+      setLoading(true)
+      const { id } = editRuleSet
+      const payload = {
+        name: editRuleSet.name,
+        description: editRuleSet.description,
+        sequenceList: editRuleSet.sequenceList || {},
+      }
+      const response = await updateRuleSet(id, payload)
+      showFeedback("success", response.message || "Kural seti güncellendi", { operation: "Kural seti güncelleme" })
+      await loadRuleSets()
+      setEditRuleSet(null)
+      setNewRuleSet({ name: "", description: "", labelType: 1 })
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, {
+        operation: "Kural seti güncelleme",
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -129,24 +143,26 @@ export default function RulesPage() {
   // Create new rule
   const handleCreateRule = async () => {
     if (!selectedRuleSet || !newRule.type) return
-    
+
     try {
       setLoading(true)
       const ruleData = {
-        type: parseInt(newRule.type),
-        param1: newRule.param1,
-        param2: newRule.param2,
+        type: selectedRuleType?.enumVal || Number.parseInt(newRule.type),
+        forWhichLabelTypes: selectedRuleType?.forWhichLabelTypes || "all",
         name: newRule.name,
         description: newRule.description,
-        sequenceValue: newRule.sequenceValue
+        parameterCount: selectedRuleType?.parameterCount || 0,
+        sequenceValue: newRule.sequenceValue,
+        param1: newRule.param1,
+        param2: newRule.param2,
       }
-      
+
       const response = await addRuleToRuleSet(selectedRuleSet.id, ruleData)
-      
-      showFeedback("success", response.message || "Kural oluşturuldu", { 
-        operation: "Kural oluşturma" 
+
+      showFeedback("success", response.message || "Kural oluşturuldu", {
+        operation: "Kural oluşturma",
       })
-      
+
       await loadRules(selectedRuleSet)
       setNewRule({
         type: "",
@@ -158,9 +174,9 @@ export default function RulesPage() {
       })
       setSelectedRuleType(null)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural oluşturma",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -172,8 +188,8 @@ export default function RulesPage() {
     try {
       setLoading(true)
       const response = await deleteRuleSet(ruleSetId)
-      showFeedback("success", response.message || "Kural seti silindi", { 
-        operation: "Kural seti silme" 
+      showFeedback("success", response.message || "Kural seti silindi", {
+        operation: "Kural seti silme",
       })
       await loadRuleSets()
       if (selectedRuleSet?.id === ruleSetId) {
@@ -181,9 +197,9 @@ export default function RulesPage() {
         setRules([])
       }
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural seti silme",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
@@ -193,34 +209,44 @@ export default function RulesPage() {
   // Delete rule
   const handleDeleteRule = async (ruleId) => {
     if (!selectedRuleSet) return
-    
+
     try {
       setLoading(true)
       const response = await deleteRule(selectedRuleSet.id, ruleId)
-      showFeedback("success", response.message || "Kural silindi", { 
-        operation: "Kural silme" 
+      showFeedback("success", response.message || "Kural silindi", {
+        operation: "Kural silme",
       })
       await loadRules(selectedRuleSet)
     } catch (error) {
-      showFeedback("error", error.response?.data?.message || error.message, { 
+      showFeedback("error", error.response?.data?.message || error.message, {
         operation: "Kural silme",
-        errorDetails: error.response?.data
+        errorDetails: error.response?.data,
       })
     } finally {
       setLoading(false)
     }
   }
 
-  // Rule type seçildiğinde
+  // Rule type selected
   const handleRuleTypeSelect = (typeId) => {
-    const selected = ruleTypes.find(t => t.id === parseInt(typeId))
+    const selected = ruleTypes.find((t) => t.id === Number.parseInt(typeId))
     setSelectedRuleType(selected)
-    setNewRule(prev => ({
+    setNewRule((prev) => ({
       ...prev,
-      type: typeId,
+      type: selected?.enumVal.toString() || "",
       name: selected?.name || "",
-      description: selected?.description || ""
+      description: selected?.description || "",
     }))
+  }
+
+  // Open edit dialog
+  const openEditDialog = (rs) => {
+    setEditRuleSet({
+      id: rs.id,
+      name: rs.name,
+      description: rs.description,
+      sequenceList: rs.sequenceList || {},
+    })
   }
 
   // Load data on component mount
@@ -236,48 +262,50 @@ export default function RulesPage() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Kural Setleri</h2>
-            <FeedbackDialog
-              title="Yeni Kural Seti Ekle"
-              trigger={
-                <Button size="sm" variant="outline">
-                  Yeni Ekle
-                </Button>
-              }
-              onConfirm={handleCreateRuleSet}
-            >
-              <div className="space-y-4">
-                <div>
-                  <Label>Ad</Label>
-                  <Input
-                    value={newRuleSet.name}
-                    onChange={(e) => setNewRuleSet({ ...newRuleSet, name: e.target.value })}
-                  />
+            <div className="flex gap-2">
+              <FeedbackDialog
+                title="Yeni Kural Seti Ekle"
+                trigger={
+                  <Button size="sm" variant="outline">
+                    Yeni Ekle
+                  </Button>
+                }
+                onConfirm={handleCreateRuleSet}
+              >
+                <div className="space-y-4">
+                  <div>
+                    <Label>Ad</Label>
+                    <Input
+                      value={newRuleSet.name}
+                      onChange={(e) => setNewRuleSet({ ...newRuleSet, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Açıklama</Label>
+                    <Input
+                      value={newRuleSet.description}
+                      onChange={(e) => setNewRuleSet({ ...newRuleSet, description: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Etiket Türü</Label>
+                    <Select
+                      value={newRuleSet.labelType.toString()}
+                      onValueChange={(value) => setNewRuleSet({ ...newRuleSet, labelType: Number.parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Etiket türü seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Ader BMK</SelectItem>
+                        <SelectItem value="2">Klemen BMK</SelectItem>
+                        <SelectItem value="3">Device BMK</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label>Açıklama</Label>
-                  <Input
-                    value={newRuleSet.description}
-                    onChange={(e) => setNewRuleSet({ ...newRuleSet, description: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label>Etiket Türü</Label>
-                  <Select
-                    value={newRuleSet.labelType.toString()}
-                    onValueChange={(value) => setNewRuleSet({ ...newRuleSet, labelType: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Etiket türü seçin" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Ader BMK</SelectItem>
-                      <SelectItem value="2">Klemen BMK</SelectItem>
-                      <SelectItem value="3">Device BMK</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </FeedbackDialog>
+              </FeedbackDialog>
+            </div>
           </div>
 
           <div className="border rounded-lg overflow-hidden">
@@ -291,22 +319,19 @@ export default function RulesPage() {
               </TableHeader>
               <TableBody>
                 {ruleSets.map((ruleSet) => (
-                  <TableRow
-                    key={ruleSet.id}
-                    className={selectedRuleSet?.id === ruleSet.id ? "bg-gray-100" : ""}
-                  >
-                    <TableCell 
-                      className="cursor-pointer hover:underline"
-                      onClick={() => loadRules(ruleSet)}
-                    >
+                  <TableRow key={ruleSet.id} className={selectedRuleSet?.id === ruleSet.id ? "bg-gray-100" : ""}>
+                    <TableCell className="cursor-pointer hover:underline" onClick={() => loadRules(ruleSet)}>
                       {ruleSet.name}
                     </TableCell>
                     <TableCell>
-                      {ruleSet.labelType === 1 && 'Ader BMK'}
-                      {ruleSet.labelType === 2 && 'Klemen BMK'}
-                      {ruleSet.labelType === 3 && 'Device BMK'}
+                      {ruleSet.labelType === 1 && "Ader BMK"}
+                      {ruleSet.labelType === 2 && "Klemen BMK"}
+                      {ruleSet.labelType === 3 && "Device BMK"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="space-x-2">
+                      <Button size="sm" variant="outline" onClick={() => openEditDialog(ruleSet)}>
+                        Düzenle
+                      </Button>
                       <Button
                         variant="destructive"
                         size="sm"
@@ -329,9 +354,7 @@ export default function RulesPage() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">
                 {selectedRuleSet.name} - Kurallar
-                <span className="text-sm text-gray-500 ml-2">
-                  ({rules.length} kural)
-                </span>
+                <span className="text-sm text-gray-500 ml-2">({rules.length} kural)</span>
               </h2>
               <FeedbackDialog
                 title="Yeni Kural Ekle"
@@ -398,10 +421,12 @@ export default function RulesPage() {
                         <Input
                           type="number"
                           value={newRule.sequenceValue}
-                          onChange={(e) => setNewRule({ 
-                            ...newRule, 
-                            sequenceValue: parseInt(e.target.value) || 1 
-                          })}
+                          onChange={(e) =>
+                            setNewRule({
+                              ...newRule,
+                              sequenceValue: Number.parseInt(e.target.value) || 1,
+                            })
+                          }
                         />
                       </div>
                       <div className="p-4 bg-gray-50 rounded-lg">
@@ -426,39 +451,83 @@ export default function RulesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rules.sort((a, b) => a.sequenceValue - b.sequenceValue).map((rule) => {
-                    const ruleType = ruleTypes.find(t => t.enumVal === rule.type) || {};
-                    return (
-                      <TableRow key={rule.id}>
-                        <TableCell>{rule.sequenceValue}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{rule.name}</div>
-                          <div className="text-sm text-gray-500">{rule.description}</div>
-                        </TableCell>
-                        <TableCell>{ruleType.name || rule.type}</TableCell>
-                        <TableCell>
-                          {rule.param1 && <div>Param1: {rule.param1}</div>}
-                          {rule.param2 && <div>Param2: {rule.param2}</div>}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteRule(rule.id)}
-                            disabled={loading}
-                          >
-                            Sil
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
+                  {rules
+                    .sort((a, b) => a.sequenceValue - b.sequenceValue)
+                    .map((rule) => {
+                      const ruleType = ruleTypes.find((t) => t.enumVal === rule.type) || {}
+                      return (
+                        <TableRow key={rule.id}>
+                          <TableCell>{rule.sequenceValue}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{rule.name}</div>
+                            <div className="text-sm text-gray-500">{rule.description}</div>
+                          </TableCell>
+                          <TableCell>{ruleType.name || rule.type}</TableCell>
+                          <TableCell>
+                            {rule.param1 && <div>Param1: {rule.param1}</div>}
+                            {rule.param2 && <div>Param2: {rule.param2}</div>}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteRule(rule.id)}
+                              disabled={loading}
+                            >
+                              Sil
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                 </TableBody>
               </Table>
             </div>
           </div>
         )}
       </div>
+
+      {/* Edit RuleSet Dialog */}
+      <FeedbackDialog
+        title="Kural Seti Düzenle"
+        open={!!editRuleSet}
+        onConfirm={handleUpdateRuleSet}
+        onCancel={() => setEditRuleSet(null)}
+      >
+        {editRuleSet && (
+          <div className="space-y-4">
+            <div>
+              <Label>Ad</Label>
+              <Input
+                value={editRuleSet.name}
+                onChange={(e) => setEditRuleSet((prev) => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Açıklama</Label>
+              <Input
+                value={editRuleSet.description}
+                onChange={(e) => setEditRuleSet((prev) => ({ ...prev, description: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Sıra Listesi (JSON formatında)</Label>
+              <Input
+                value={JSON.stringify(editRuleSet.sequenceList)}
+                onChange={(e) => {
+                  try {
+                    const seq = JSON.parse(e.target.value)
+                    setEditRuleSet((prev) => ({ ...prev, sequenceList: seq }))
+                  } catch {
+                    /* invalid JSON */
+                  }
+                }}
+                placeholder='Örnek: {"8":4, "9":3}'
+              />
+            </div>
+          </div>
+        )}
+      </FeedbackDialog>
     </AppLayout>
   )
 }

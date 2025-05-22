@@ -250,13 +250,13 @@ export const addRuleToRuleSet = async (ruleSetId, ruleData) => {
 
 export const updateRule = async (ruleSetId, ruleId, ruleData) => {
   const res = await axios.put(
-    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}/rules/${ruleId}`,
+    `${API_URL}/settings/label_manipulation_module/params/rulesets/${ruleSetId}`,
     ruleData,
     {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
         'Content-Type': 'application/json'
-      }
+      } 
     }
   );
   return res.data;

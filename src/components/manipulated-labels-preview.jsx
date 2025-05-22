@@ -105,8 +105,6 @@ export default function ManipulatedLabelsPreview({
                         <td className="border p-2">{label.groupLabel}</td>
                         <td className="border p-2 whitespace-pre">{label.rowItems[0]}</td>
                         <td className="border p-2 whitespace-pre">{label.rowItems[1] || "-"}</td>
-                        {renderRotatedCell(label.rowItemsRotates?.[0], label.rowItemsRotates?.[0], 0)}
-                        {renderRotatedCell(label.rowItemsRotates?.[1], label.rowItemsRotates?.[1], 1)}
                       </tr>
                     ))}
                   </tbody>
@@ -128,6 +126,8 @@ export default function ManipulatedLabelsPreview({
                     <th className="border p-2 text-left">Grup Etiketi</th>
                     <th className="border p-2 text-left">Etiket 1</th>
                     <th className="border p-2 text-left">Etiket 2</th>
+                    <th className="border p-2 text-left">Döndürme 1</th>
+                    <th className="border p-2 text-left">Döndürme 2</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -137,6 +137,8 @@ export default function ManipulatedLabelsPreview({
                       <td className="border p-2">{label.groupLabel}</td>
                       <td className="border p-2 whitespace-pre">{label.rowItems[0]}</td>
                       <td className="border p-2 whitespace-pre">{label.rowItems[1] || "-"}</td>
+                      {renderRotatedCell(label.rowItemsRotates?.[0], label.rowItemsRotates?.[0], 0)}
+                      {renderRotatedCell(label.rowItemsRotates?.[1], label.rowItemsRotates?.[1], 1)}
                     </tr>
                   ))}
                 </tbody>
