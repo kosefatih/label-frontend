@@ -18,6 +18,7 @@ import { FeedbackDialog } from "@/components/feedback-dialog"
 import { showFeedback } from "@/lib/feedback"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 export default function RulesPage() {
   const [ruleSets, setRuleSets] = useState([])
@@ -488,46 +489,54 @@ export default function RulesPage() {
       </div>
 
       {/* Edit RuleSet Dialog */}
-      <FeedbackDialog
-        title="Kural Seti Düzenle"
-        open={!!editRuleSet}
-        onConfirm={handleUpdateRuleSet}
-        onCancel={() => setEditRuleSet(null)}
-      >
-        {editRuleSet && (
-          <div className="space-y-4">
-            <div>
-              <Label>Ad</Label>
-              <Input
-                value={editRuleSet.name}
-                onChange={(e) => setEditRuleSet((prev) => ({ ...prev, name: e.target.value }))}
-              />
+      <Dialog open={!!editRuleSet} onOpenChange={(open) => !open && setEditRuleSet(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kural Seti Düzenle</DialogTitle>
+          </DialogHeader>
+          {editRuleSet && (
+            <div className="space-y-4">
+              <div>
+                <Label>Ad</Label>
+                <Input
+                  value={editRuleSet.name}
+                  onChange={(e) => setEditRuleSet((prev) => ({ ...prev, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Açıklama</Label>
+                <Input
+                  value={editRuleSet.description}
+                  onChange={(e) => setEditRuleSet((prev) => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>Sıra Listesi (JSON formatında)</Label>
+                <Input
+                  value={JSON.stringify(editRuleSet.sequenceList)}
+                  onChange={(e) => {
+                    try {
+                      const seq = JSON.parse(e.target.value)
+                      setEditRuleSet((prev) => ({ ...prev, sequenceList: seq }))
+                    } catch {
+                      /* invalid JSON */
+                    }
+                  }}
+                  placeholder='Örnek: {"8":4, "9":3}'
+                />
+              </div>
             </div>
-            <div>
-              <Label>Açıklama</Label>
-              <Input
-                value={editRuleSet.description}
-                onChange={(e) => setEditRuleSet((prev) => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>Sıra Listesi (JSON formatında)</Label>
-              <Input
-                value={JSON.stringify(editRuleSet.sequenceList)}
-                onChange={(e) => {
-                  try {
-                    const seq = JSON.parse(e.target.value)
-                    setEditRuleSet((prev) => ({ ...prev, sequenceList: seq }))
-                  } catch {
-                    /* invalid JSON */
-                  }
-                }}
-                placeholder='Örnek: {"8":4, "9":3}'
-              />
-            </div>
-          </div>
-        )}
-      </FeedbackDialog>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditRuleSet(null)}>
+              İptal
+            </Button>
+            <Button onClick={handleUpdateRuleSet}>
+              Kaydet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   )
 }

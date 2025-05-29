@@ -22,7 +22,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     type: 3,
     // AderBMK
     aderHasGroup: false,
-    aderGroupCol: 4,
+    aderGroupCol: "4",
     aderLabelCols: "0,2",
     aderRotates: "1,3",
     // KlemensBMK
@@ -336,8 +336,6 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
             <label className="block text-sm font-medium">Grup Etiket Sütunu</label>
             <Input
               name="aderGroupCol"
-              type="number"
-              min="0"
               value={formValues.aderGroupCol}
               onChange={handleChange}
               disabled={!formValues.aderHasGroup}

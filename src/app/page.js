@@ -41,6 +41,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import ManipulatedLabelsPreview from "../components/manipulated-labels-preview"
+import { CustomerForm } from "../components/forms/CustomerForm"
+import { ProjectForm } from "../components/forms/ProjectForm"
+import { PanoForm } from "../components/forms/PanoForm"
 
 export default function Home() {
   const [customers, setCustomers] = useState([])
@@ -689,73 +692,6 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     loadRuleSets()
   }, [])
 
-  // Customer form component
-  const CustomerForm = () => (
-    <>
-      <div>
-        <Label>Kod</Label>
-        <Input value={newCustomer.code} onChange={(e) => setNewCustomer({ ...newCustomer, code: e.target.value })} />
-      </div>
-      <div>
-        <Label>Ad</Label>
-        <Input value={newCustomer.name} onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-      </div>
-      <div>
-        <Label>Açıklama</Label>
-        <Input
-          value={newCustomer.description}
-          onChange={(e) => setNewCustomer({ ...newCustomer, description: e.target.value })}
-        />
-      </div>
-      <div>
-        <Label>Adres</Label>
-        <Input
-          value={newCustomer.address}
-          onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-        />
-      </div>
-    </>
-  )
-
-  // Project form component
-  const ProjectForm = () => (
-    <>
-      <div>
-        <Label>Kod</Label>
-        <Input value={newProject.code} onChange={(e) => setNewProject({ ...newProject, code: e.target.value })} />
-      </div>
-      <div>
-        <Label>Ad</Label>
-        <Input value={newProject.name} onChange={(e) => setNewProject({ ...newProject, name: e.target.value })} />
-      </div>
-      <div>
-        <Label>Açıklama</Label>
-        <Input
-          value={newProject.description}
-          onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-        />
-      </div>
-    </>
-  )
-
-  // Pano form component
-  const PanoForm = () => (
-    <>
-      <div>
-        <Label>Kod</Label>
-        <Input value={newPano.code} onChange={(e) => setNewPano({ ...newPano, code: e.target.value })} />
-      </div>
-      <div>
-        <Label>Ad</Label>
-        <Input value={newPano.code} onChange={(e) => setNewPano({ ...newPano, name: e.target.value })} />
-      </div>
-      <div>
-        <Label>Açıklama</Label>
-        <Input value={newPano.description} onChange={(e) => setNewPano({ ...newPano, description: e.target.value })} />
-      </div>
-    </>
-  )
-
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
       <Button variant="outline" className="mb-4" onClick={() => setShowDeviceDefineDialog(true)}>
@@ -779,7 +715,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
               }
               onConfirm={handleCreateCustomer}
             >
-              <CustomerForm />
+              <CustomerForm newCustomer={newCustomer} setNewCustomer={setNewCustomer} />
             </FeedbackDialog>
           }
         >
@@ -817,7 +753,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                 }
                 onConfirm={handleCreateProject}
               >
-                <ProjectForm />
+                <ProjectForm newProject={newProject} setNewProject={setNewProject} />
               </FeedbackDialog>
             )
           }
@@ -850,7 +786,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                 }
                 onConfirm={handleCreatePano}
               >
-                <PanoForm />
+                <PanoForm newPano={newPano} setNewPano={setNewPano} />
               </FeedbackDialog>
             )
           }
