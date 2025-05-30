@@ -38,9 +38,10 @@ export default function RulesPage() {
     param2: "",
     name: "",
     description: "",
-    sequenceValue: 1,
+    sequenceValue: "",
   })
   const [selectedRuleType, setSelectedRuleType] = useState(null)
+  const [sequenceInput, setSequenceInput] = useState({ ruleId: "", value: "" })
 
   // Load rule sets
   const loadRuleSets = async () => {
@@ -145,6 +146,15 @@ export default function RulesPage() {
   const handleCreateRule = async () => {
     if (!selectedRuleSet || !newRule.type) return
 
+    // Validate sequenceValue
+    const sequenceValue = Number.parseInt(newRule.sequenceValue);
+    if (isNaN(sequenceValue)) {
+      showFeedback("error", "Sıra değeri 1 veya daha büyük bir sayı olmalıdır", {
+        operation: "Kural oluşturma",
+      });
+      return;
+    }
+
     try {
       setLoading(true)
       const ruleData = {
@@ -153,7 +163,7 @@ export default function RulesPage() {
         name: newRule.name,
         description: newRule.description,
         parameterCount: selectedRuleType?.parameterCount || 0,
-        sequenceValue: newRule.sequenceValue,
+        sequenceValue: sequenceValue,
         param1: newRule.param1,
         param2: newRule.param2,
       }
@@ -171,7 +181,7 @@ export default function RulesPage() {
         param2: "",
         name: "",
         description: "",
-        sequenceValue: 1,
+        sequenceValue: "",
       })
       setSelectedRuleType(null)
     } catch (error) {
@@ -248,6 +258,20 @@ export default function RulesPage() {
       description: rs.description,
       sequenceList: rs.sequenceList || {},
     })
+  }
+
+  // Handle sequence value change
+  const handleSequenceValueChange = () => {
+    if (!sequenceInput.ruleId || sequenceInput.value === "") return;
+    
+    setEditRuleSet((prev) => ({
+      ...prev,
+      sequenceList: {
+        ...prev.sequenceList,
+        [sequenceInput.ruleId]: Number.parseInt(sequenceInput.value) || 0
+      }
+    }))
+    setSequenceInput({ ruleId: "", value: "" })
   }
 
   // Load data on component mount
@@ -418,16 +442,18 @@ export default function RulesPage() {
                         </div>
                       )}
                       <div>
-                        <Label>Sıra</Label>
+                        <Label>Sıra (Sequence Value)</Label>
                         <Input
-                          type="number"
                           value={newRule.sequenceValue}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const value = e.target.value;
                             setNewRule({
                               ...newRule,
-                              sequenceValue: Number.parseInt(e.target.value) || 1,
-                            })
-                          }
+                              sequenceValue: value,
+                            });
+                          }}
+                          step="1"
+                          placeholder="Sıra değeri giriniz"
                         />
                       </div>
                       <div className="p-4 bg-gray-50 rounded-lg">
@@ -444,7 +470,7 @@ export default function RulesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sıra</TableHead>
+                    <TableHead>Sıra (Sequence Value)</TableHead>
                     <TableHead>Ad</TableHead>
                     <TableHead>Tip</TableHead>
                     <TableHead>Parametreler</TableHead>
@@ -453,7 +479,7 @@ export default function RulesPage() {
                 </TableHeader>
                 <TableBody>
                   {rules
-                    .sort((a, b) => a.sequenceValue - b.sequenceValue)
+                    .sort((a, b) => (a.sequenceValue || 0) - (b.sequenceValue || 0))
                     .map((rule) => {
                       const ruleType = ruleTypes.find((t) => t.enumVal === rule.type) || {}
                       return (
@@ -511,19 +537,51 @@ export default function RulesPage() {
                 />
               </div>
               <div>
-                <Label>Sıra Listesi (JSON formatında)</Label>
-                <Input
-                  value={JSON.stringify(editRuleSet.sequenceList)}
-                  onChange={(e) => {
-                    try {
-                      const seq = JSON.parse(e.target.value)
-                      setEditRuleSet((prev) => ({ ...prev, sequenceList: seq }))
-                    } catch {
-                      /* invalid JSON */
-                    }
-                  }}
-                  placeholder='Örnek: {"8":4, "9":3}'
-                />
+                <Label>Kural Sıralamaları</Label>
+                <div className="space-y-4 mt-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={sequenceInput.ruleId}
+                      onChange={(e) => setSequenceInput(prev => ({ ...prev, ruleId: e.target.value }))}
+                      placeholder="Kural ID"
+                      className="w-1/2"
+                    />
+                    <Input
+                      type="number"
+                      value={sequenceInput.value}
+                      onChange={(e) => setSequenceInput(prev => ({ ...prev, value: e.target.value }))}
+                      placeholder="Sıra değeri"
+                      className="w-1/2"
+                    />
+                    <Button 
+                      onClick={handleSequenceValueChange}
+                      disabled={!sequenceInput.ruleId || sequenceInput.value === ""}
+                    >
+                      Ekle
+                    </Button>
+                  </div>
+                  <div className="border rounded-lg p-2">
+                    <div className="text-sm font-medium mb-2">Mevcut Sıralamalar:</div>
+                    {Object.entries(editRuleSet.sequenceList).map(([ruleId, value]) => (
+                      <div key={ruleId} className="flex justify-between items-center py-1">
+                        <span className="text-sm">Kural {ruleId}: {value}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditRuleSet(prev => {
+                              const newSequenceList = { ...prev.sequenceList }
+                              delete newSequenceList[ruleId]
+                              return { ...prev, sequenceList: newSequenceList }
+                            })
+                          }}
+                        >
+                          Sil
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           )}

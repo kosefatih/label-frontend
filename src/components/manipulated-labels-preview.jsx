@@ -60,13 +60,6 @@ export default function ManipulatedLabelsPreview({
           <DialogTitle className="text-xl">
             <div className="flex justify-between items-center">
               <span>Etiket Önizleme: {applyListName}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowOriginal(!showOriginal)}
-              >
-                {showOriginal ? "Orijinal Listeyi Gizle" : "Orijinal Listeyi Göster"}
-              </Button>
             </div>
           </DialogTitle>
           <div className="text-sm text-muted-foreground mt-1">
