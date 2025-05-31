@@ -64,10 +64,10 @@ export default function Home() {
   const [exportSettings, setExportSettings] = useState({
     aderBMKExportDetailSettings: {
       fileName: "",
-      repeatCount: 4,
-      labelRowCount: 12,
+      repeatCount: "",
+      labelRowCount: "",
       exportType: "HeadEnd",
-      hasIdentifierColumn: true,
+      hasIdentifierColumn: false,
       spaceAvaliable: false,
     },
     klemensBMKExportDetailSettings: {},
@@ -1390,15 +1390,13 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                       </Label>
                       <Input
                         id="repeatCount"
-                        type="number"
-                        min="0"
                         value={exportSettings.aderBMKExportDetailSettings.repeatCount}
                         onChange={(e) =>
                           setExportSettings({
                             ...exportSettings,
                             aderBMKExportDetailSettings: {
                               ...exportSettings.aderBMKExportDetailSettings,
-                              repeatCount: Number(e.target.value),
+                              repeatCount: e.target.value,
                             },
                           })
                         }
@@ -1412,15 +1410,13 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                       </Label>
                       <Input
                         id="labelRowCount"
-                        type="number"
-                        min="1"
                         value={exportSettings.aderBMKExportDetailSettings.labelRowCount}
                         onChange={(e) =>
                           setExportSettings({
                             ...exportSettings,
                             aderBMKExportDetailSettings: {
                               ...exportSettings.aderBMKExportDetailSettings,
-                              labelRowCount: Number(e.target.value),
+                              labelRowCount: e.target.value,
                             },
                           })
                         }
@@ -1459,18 +1455,20 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                       <Label htmlFor="hasIdentifierColumn" className="text-right">
                         Tanımlayıcı Kolonu
                       </Label>
-                      <Switch
+                      <input
+                        type="checkbox"
                         id="hasIdentifierColumn"
                         checked={exportSettings.aderBMKExportDetailSettings.hasIdentifierColumn}
-                        onCheckedChange={(checked) =>
+                        onChange={(e) =>
                           setExportSettings({
                             ...exportSettings,
                             aderBMKExportDetailSettings: {
                               ...exportSettings.aderBMKExportDetailSettings,
-                              hasIdentifierColumn: checked,
+                              hasIdentifierColumn: e.target.checked,
                             },
                           })
                         }
+                        className="h-4 w-4"
                       />
                     </div>
 
@@ -1478,18 +1476,20 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                       <Label htmlFor="spaceAvaliable" className="text-right">
                         Boşluk Kullanılabilir
                       </Label>
-                      <Switch
+                      <input
+                        type="checkbox"
                         id="spaceAvaliable"
                         checked={exportSettings.aderBMKExportDetailSettings.spaceAvaliable}
-                        onCheckedChange={(checked) =>
+                        onChange={(e) =>
                           setExportSettings({
                             ...exportSettings,
                             aderBMKExportDetailSettings: {
                               ...exportSettings.aderBMKExportDetailSettings,
-                              spaceAvaliable: checked,
+                              spaceAvaliable: e.target.checked,
                             },
                           })
                         }
+                        className="h-4 w-4"
                       />
                     </div>
                   </div>
