@@ -73,7 +73,7 @@ export default function Home() {
     klemensBMKExportDetailSettings: {},
     deviceBMKExportSettings: {
       fileName: "",
-      repeatCount: "",
+      repeatCount: 0,
     },
   })
   const [newCustomer, setNewCustomer] = useState({
@@ -1395,13 +1395,15 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                           </Label>
                           <Input
                             id="repeatCount"
+                            type="number"
+                            min="0"
                             value={exportSettings.deviceBMKExportSettings.repeatCount}
                             onChange={(e) =>
                               setExportSettings({
                                 ...exportSettings,
                                 deviceBMKExportSettings: {
                                   ...exportSettings.deviceBMKExportSettings,
-                                  repeatCount: e.target.value,
+                                  repeatCount: parseInt(e.target.value) || 0,
                                 },
                               })
                             }
@@ -1549,11 +1551,25 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                     <LoadingButton
                       isLoading={loading}
                       onClick={() => {
+                        // API'ye gönderilmeden önce son düzenlemeleri yap
+                        const finalSettings = {
+                          ...exportSettings,
+                          deviceBMKExportSettings: {
+                            ...exportSettings.deviceBMKExportSettings,
+                            repeatCount: Number(exportSettings.deviceBMKExportSettings.repeatCount) || 0,
+                          },
+                          aderBMKExportDetailSettings: {
+                            ...exportSettings.aderBMKExportDetailSettings,
+                            repeatCount: Number(exportSettings.aderBMKExportDetailSettings.repeatCount) || 0,
+                            labelRowCount: Number(exportSettings.aderBMKExportDetailSettings.labelRowCount) || 0,
+                          }
+                        };
+
                         handleExportLabels(
                           currentExportItem.listName,
                           currentExportItem.labelType,
                           currentExportItem.applyedListName,
-                          exportSettings
+                          finalSettings
                         )
                         setExportDialogOpen(false)
                       }}
