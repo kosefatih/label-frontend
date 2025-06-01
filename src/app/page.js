@@ -73,7 +73,7 @@ export default function Home() {
     klemensBMKExportDetailSettings: {},
     deviceBMKExportSettings: {
       fileName: "",
-      repeatCount: 0,
+      repeatCount: "",
     },
   })
   const [newCustomer, setNewCustomer] = useState({
@@ -1050,81 +1050,81 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
 
                             <Tooltip>
                               <TooltipTrigger asChild>
-                            <FeedbackDialog
-                              title="Manipüle Edilmiş Listeler"
-                              trigger={
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-8 px-2"
-                                  onClick={() => handleGetManipulatedLabels(group.listName)}
-                                >
-                                  Export
-                                </Button>
-                              }
-                              onConfirm={() => handleGetManipulatedLabels(group.listName)}
-                              confirmText="Listeyi Yenile"
-                              closeOnConfirm={false}
-                            >
-                              {loading ? (
-                                <div className="flex justify-center py-8">
-                                  <p>Yükleniyor...</p>
-                                </div>
-                              ) : manipulatedLists.length > 0 ? (
-                                <div className="space-y-3">
-                                  {manipulatedLists.map((list, index) => (
-                                    <div
-                                      key={index}
-                                      className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                <FeedbackDialog
+                                  title="Manipüle Edilmiş Listeler"
+                                  trigger={
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-8 px-2"
+                                      onClick={() => handleGetManipulatedLabels(group.listName)}
                                     >
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium truncate">{list.applyedListName}</p>
-                                        <p className="text-sm text-gray-600 truncate">
-                                          {list.labelType} - {list.listRowCount} kayıt
-                                        </p>
-                                      </div>
-                                      <div className="flex gap-2">
-                                        {/* Sadece AderBMK tipi için önizleme butonunu göster */}
-                                        {list.labelType === "AderBMK" && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() =>
-                                              handlePreviewLabels(
-                                                group.listName,
-                                                list.labelType,
-                                                list.applyedListName
-                                              )
-                                            }
-                                          >
-                                            <Eye className="h-4 w-4 mr-1" /> Önizle
-                                          </Button>
-                                        )}
-                                        <Button
-                                          size="sm"
-                                          onClick={() => {
-                                            setCurrentExportItem({
-                                              listName: group.listName,
-                                              labelType: list.labelType,
-                                              applyedListName: list.applyedListName,
-                                              defaultRepeatCount: list.labelType === "AderBMK" ? 4 : 1,
-                                            })
-                                            setRepeatCount(list.labelType === "AderBMK" ? 4 : 1)
-                                            setExportDialogOpen(true)
-                                          }}
-                                        >
-                                          Çıktı Al
-                                        </Button>
-                                      </div>
+                                      Export
+                                    </Button>
+                                  }
+                                  onConfirm={() => handleGetManipulatedLabels(group.listName)}
+                                  confirmText="Listeyi Yenile"
+                                  closeOnConfirm={false}
+                                >
+                                  {loading ? (
+                                    <div className="flex justify-center py-8">
+                                      <p>Yükleniyor...</p>
                                     </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="py-4 text-center text-gray-500">
-                                  <p>Manipüle edilmiş liste bulunamadı</p>
-                                </div>
-                              )}
-                            </FeedbackDialog>
+                                  ) : manipulatedLists.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {manipulatedLists.map((list, index) => (
+                                        <div
+                                          key={index}
+                                          className="p-3 border rounded-lg flex justify-between items-center hover:bg-gray-50 transition-colors"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium truncate">{list.applyedListName}</p>
+                                            <p className="text-sm text-gray-600 truncate">
+                                              {list.labelType} - {list.listRowCount} kayıt
+                                            </p>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            {/* Sadece AderBMK tipi için önizleme butonunu göster */}
+                                            {list.labelType === "AderBMK" && (
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() =>
+                                                  handlePreviewLabels(
+                                                    group.listName,
+                                                    list.labelType,
+                                                    list.applyedListName
+                                                  )
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" /> Önizle
+                                              </Button>
+                                            )}
+                                            <Button
+                                              size="sm"
+                                              onClick={() => {
+                                                setCurrentExportItem({
+                                                  listName: group.listName,
+                                                  labelType: list.labelType,
+                                                  applyedListName: list.applyedListName,
+                                                  defaultRepeatCount: list.labelType === "AderBMK" ? 4 : 1,
+                                                })
+                                                setRepeatCount(list.labelType === "AderBMK" ? 4 : 1)
+                                                setExportDialogOpen(true)
+                                              }}
+                                            >
+                                              Çıktı Al
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="py-4 text-center text-gray-500">
+                                      <p>Manipüle edilmiş liste bulunamadı</p>
+                                    </div>
+                                  )}
+                                </FeedbackDialog>
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Listele</p>
@@ -1360,160 +1360,201 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                   </DialogHeader>
 
                   <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="fileName" className="text-right">
-                        Dosya Adı
-                      </Label>
-                      <Input
-                        id="fileName"
-                        value={
-                          exportSettings.aderBMKExportDetailSettings.fileName ||
-                          currentExportItem?.applyedListName ||
-                          ""
-                        }
-                        onChange={(e) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              fileName: e.target.value,
-                            },
-                          })
-                        }
-                        className="col-span-3"
-                      />
-                    </div>
+                    {currentExportItem?.labelType === "KlemensBMK" && (
+                      <div className="text-center py-4">
+                        <p className="text-gray-600">Klemens BMK için özel ayar bulunmamaktadır.</p>
+                        <p className="text-sm text-gray-500 mt-2">Doğrudan çıktı alabilirsiniz.</p>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="repeatCount" className="text-right">
-                        Tekrar Sayısı
-                      </Label>
-                      <Input
-                        id="repeatCount"
-                        value={exportSettings.aderBMKExportDetailSettings.repeatCount}
-                        onChange={(e) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              repeatCount: e.target.value,
-                            },
-                          })
-                        }
-                        className="col-span-3"
-                      />
-                    </div>
+                    {currentExportItem?.labelType === "DeviceBMK" && (
+                      <>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="fileName" className="text-right">
+                            Dosya Adı
+                          </Label>
+                          <Input
+                            id="fileName"
+                            value={exportSettings.deviceBMKExportSettings.fileName || currentExportItem?.applyedListName || ""}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                deviceBMKExportSettings: {
+                                  ...exportSettings.deviceBMKExportSettings,
+                                  fileName: e.target.value,
+                                },
+                              })
+                            }
+                            className="col-span-3"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="labelRowCount" className="text-right">
-                        Etiket Satır Sayısı
-                      </Label>
-                      <Input
-                        id="labelRowCount"
-                        value={exportSettings.aderBMKExportDetailSettings.labelRowCount}
-                        onChange={(e) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              labelRowCount: e.target.value,
-                            },
-                          })
-                        }
-                        className="col-span-3"
-                      />
-                    </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="repeatCount" className="text-right">
+                            Tekrar Sayısı
+                          </Label>
+                          <Input
+                            id="repeatCount"
+                            value={exportSettings.deviceBMKExportSettings.repeatCount}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                deviceBMKExportSettings: {
+                                  ...exportSettings.deviceBMKExportSettings,
+                                  repeatCount: e.target.value,
+                                },
+                              })
+                            }
+                            className="col-span-3"
+                          />
+                        </div>
+                      </>
+                    )}
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="exportType" className="text-right">
-                        Export Tipi
-                      </Label>
-                      <Select
-                        value={exportSettings.aderBMKExportDetailSettings.exportType}
-                        onValueChange={(value) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              exportType: value,
-                            },
-                          })
-                        }
-                      >
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Export tipi seçin" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="HeadEnd">HeadEnd</SelectItem>
-                          <SelectItem value="Alphabethic">Alphabethic</SelectItem>
-                          <SelectItem value="Standard">Standard</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {currentExportItem?.labelType === "AderBMK" && (
+                      <>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="fileName" className="text-right">
+                            Dosya Adı
+                          </Label>
+                          <Input
+                            id="fileName"
+                            value={exportSettings.aderBMKExportDetailSettings.fileName || currentExportItem?.applyedListName || ""}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  fileName: e.target.value,
+                                },
+                              })
+                            }
+                            className="col-span-3"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="hasIdentifierColumn" className="text-right">
-                        Tanımlayıcı Kolonu
-                      </Label>
-                      <input
-                        type="checkbox"
-                        id="hasIdentifierColumn"
-                        checked={exportSettings.aderBMKExportDetailSettings.hasIdentifierColumn}
-                        onChange={(e) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              hasIdentifierColumn: e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                    </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="repeatCount" className="text-right">
+                            Tekrar Sayısı
+                          </Label>
+                          <Input
+                            id="repeatCount"
+                            value={exportSettings.aderBMKExportDetailSettings.repeatCount}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  repeatCount: e.target.value,
+                                },
+                              })
+                            }
+                            className="col-span-3"
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      <Label htmlFor="spaceAvaliable" className="text-right">
-                        Boşluk Kullanılabilir
-                      </Label>
-                      <input
-                        type="checkbox"
-                        id="spaceAvaliable"
-                        checked={exportSettings.aderBMKExportDetailSettings.spaceAvaliable}
-                        onChange={(e) =>
-                          setExportSettings({
-                            ...exportSettings,
-                            aderBMKExportDetailSettings: {
-                              ...exportSettings.aderBMKExportDetailSettings,
-                              spaceAvaliable: e.target.checked,
-                            },
-                          })
-                        }
-                        className="h-4 w-4"
-                      />
-                    </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="labelRowCount" className="text-right">
+                            Etiket Satır Sayısı
+                          </Label>
+                          <Input
+                            id="labelRowCount"
+                            value={exportSettings.aderBMKExportDetailSettings.labelRowCount}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  labelRowCount: e.target.value,
+                                },
+                              })
+                            }
+                            className="col-span-3"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="exportType" className="text-right">
+                            Export Tipi
+                          </Label>
+                          <Select
+                            value={exportSettings.aderBMKExportDetailSettings.exportType}
+                            onValueChange={(value) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  exportType: value,
+                                },
+                              })
+                            }
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Export tipi seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="HeadEnd">HeadEnd</SelectItem>
+                              <SelectItem value="Alphabethic">Alphabethic</SelectItem>
+                              <SelectItem value="Standard">Standard</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="hasIdentifierColumn" className="text-right">
+                            Tanımlayıcı Kolonu
+                          </Label>
+                          <input
+                            type="checkbox"
+                            id="hasIdentifierColumn"
+                            checked={exportSettings.aderBMKExportDetailSettings.hasIdentifierColumn}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  hasIdentifierColumn: e.target.checked,
+                                },
+                              })
+                            }
+                            className="h-4 w-4"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="spaceAvaliable" className="text-right">
+                            Boşluk Kullanılabilir
+                          </Label>
+                          <input
+                            type="checkbox"
+                            id="spaceAvaliable"
+                            checked={exportSettings.aderBMKExportDetailSettings.spaceAvaliable}
+                            onChange={(e) =>
+                              setExportSettings({
+                                ...exportSettings,
+                                aderBMKExportDetailSettings: {
+                                  ...exportSettings.aderBMKExportDetailSettings,
+                                  spaceAvaliable: e.target.checked,
+                                },
+                              })
+                            }
+                            className="h-4 w-4"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <DialogFooter>
                     <LoadingButton
                       isLoading={loading}
                       onClick={() => {
-                        // Device BMK için ayarları da güncelle
-                        const finalExportSettings = {
-                          ...exportSettings,
-                          deviceBMKExportSettings: {
-                            fileName: currentExportItem?.applyedListName || "",
-                            repeatCount: currentExportItem?.labelType === "DeviceBMK" ? repeatCount : 0,
-                          },
-                        }
-
                         handleExportLabels(
                           currentExportItem.listName,
                           currentExportItem.labelType,
                           currentExportItem.applyedListName,
-                          finalExportSettings,
+                          exportSettings
                         )
-
                         setExportDialogOpen(false)
                       }}
                     >
