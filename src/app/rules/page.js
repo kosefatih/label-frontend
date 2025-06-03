@@ -32,6 +32,7 @@ export default function RulesPage() {
     labelType: 1,
   })
   const [editRuleSet, setEditRuleSet] = useState(null)
+  const [editingRules, setEditingRules] = useState([])
   const [newRule, setNewRule] = useState({
     type: "",
     param1: "",
@@ -116,6 +117,29 @@ export default function RulesPage() {
     }
   }
 
+  // Open edit mode
+  const openEditMode = (rs) => {
+    setEditRuleSet({
+      id: rs.id,
+      name: rs.name,
+      description: rs.description,
+    })
+    // Initialize editing rules with current rules
+    setEditingRules(rules.map(rule => ({
+      id: rule.id,
+      param1: rule.param1 || "",
+      param2: rule.param2 || "",
+      sequenceValue: rule.sequenceValue || ""
+    })))
+  }
+
+  // Handle rule field update
+  const handleRuleFieldUpdate = (ruleId, field, value) => {
+    setEditingRules(prev => prev.map(rule => 
+      rule.id === ruleId ? { ...rule, [field]: value } : rule
+    ))
+  }
+
   // Update RuleSet
   const handleUpdateRuleSet = async () => {
     if (!editRuleSet) return
@@ -125,12 +149,18 @@ export default function RulesPage() {
       const payload = {
         name: editRuleSet.name,
         description: editRuleSet.description,
-        sequenceList: editRuleSet.sequenceList || {},
+        ruleUpdateModels: editingRules.map(rule => ({
+          id: rule.id,
+          Param1: rule.param1,
+          Param2: rule.param2,
+          SequenceValue: Number.parseInt(rule.sequenceValue) || 0
+        }))
       }
       const response = await updateRuleSet(id, payload)
       showFeedback("success", response.message || "Kural seti güncellendi", { operation: "Kural seti güncelleme" })
       await loadRuleSets()
       setEditRuleSet(null)
+      setEditingRules([])
       setNewRuleSet({ name: "", description: "", labelType: 1 })
     } catch (error) {
       showFeedback("error", error.response?.data?.message || error.message, {
@@ -250,16 +280,6 @@ export default function RulesPage() {
     }))
   }
 
-  // Open edit dialog
-  const openEditDialog = (rs) => {
-    setEditRuleSet({
-      id: rs.id,
-      name: rs.name,
-      description: rs.description,
-      sequenceList: rs.sequenceList || {},
-    })
-  }
-
   // Handle sequence value change
   const handleSequenceValueChange = () => {
     if (!sequenceInput.ruleId || sequenceInput.value === "") return;
@@ -354,9 +374,6 @@ export default function RulesPage() {
                       {ruleSet.labelType === 3 && "Device BMK"}
                     </TableCell>
                     <TableCell className="space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditDialog(ruleSet)}>
-                        Düzenle
-                      </Button>
                       <Button
                         variant="destructive"
                         size="sm"
@@ -381,89 +398,110 @@ export default function RulesPage() {
                 {selectedRuleSet.name} - Kurallar
                 <span className="text-sm text-gray-500 ml-2">({rules.length} kural)</span>
               </h2>
-              <FeedbackDialog
-                title="Yeni Kural Ekle"
-                trigger={
-                  <Button size="sm" variant="outline">
-                    Yeni Ekle
-                  </Button>
-                }
-                onConfirm={handleCreateRule}
-              >
-                <div className="space-y-4">
-                  <div>
-                    <Label>Kural Tipi</Label>
-                    <Select onValueChange={handleRuleTypeSelect}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Kural tipi seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ruleTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id.toString()}>
-                            {type.name} ({type.parameterCount} parametre)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedRuleType && (
-                    <>
-                      <div>
-                        <Label>Kural Adı</Label>
-                        <Input
-                          value={newRule.name}
-                          onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Açıklama</Label>
-                        <Input
-                          value={newRule.description}
-                          onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label>Parametre 1</Label>
-                        <Input
-                          value={newRule.param1}
-                          onChange={(e) => setNewRule({ ...newRule, param1: e.target.value })}
-                          placeholder={selectedRuleType.parameterCount > 0 ? "Gerekli" : "Opsiyonel"}
-                        />
-                      </div>
-                      {selectedRuleType.parameterCount > 1 && (
+              <div className="flex gap-2">
+                {editRuleSet ? (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setEditRuleSet(null)
+                      setEditingRules([])
+                    }}>
+                      İptal
+                    </Button>
+                    <Button size="sm" onClick={handleUpdateRuleSet}>
+                      Değişiklikleri Kaydet
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => openEditMode(selectedRuleSet)}>
+                      Düzenle
+                    </Button>
+                    <FeedbackDialog
+                      title="Yeni Kural Ekle"
+                      trigger={
+                        <Button size="sm" variant="outline">
+                          Yeni Ekle
+                        </Button>
+                      }
+                      onConfirm={handleCreateRule}
+                    >
+                      <div className="space-y-4">
                         <div>
-                          <Label>Parametre 2</Label>
-                          <Input
-                            value={newRule.param2}
-                            onChange={(e) => setNewRule({ ...newRule, param2: e.target.value })}
-                            placeholder="Gerekli"
-                          />
+                          <Label>Kural Tipi</Label>
+                          <Select onValueChange={handleRuleTypeSelect}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Kural tipi seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ruleTypes.map((type) => (
+                                <SelectItem key={type.id} value={type.id.toString()}>
+                                  {type.name} ({type.parameterCount} parametre)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      )}
-                      <div>
-                        <Label>Sıra (Sequence Value)</Label>
-                        <Input
-                          value={newRule.sequenceValue}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setNewRule({
-                              ...newRule,
-                              sequenceValue: value,
-                            });
-                          }}
-                          step="1"
-                          placeholder="Sıra değeri giriniz"
-                        />
+
+                        {selectedRuleType && (
+                          <>
+                            <div>
+                              <Label>Kural Adı</Label>
+                              <Input
+                                value={newRule.name}
+                                onChange={(e) => setNewRule({ ...newRule, name: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Açıklama</Label>
+                              <Input
+                                value={newRule.description}
+                                onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label>Parametre 1</Label>
+                              <Input
+                                value={newRule.param1}
+                                onChange={(e) => setNewRule({ ...newRule, param1: e.target.value })}
+                                placeholder={selectedRuleType.parameterCount > 0 ? "Gerekli" : "Opsiyonel"}
+                              />
+                            </div>
+                            {selectedRuleType.parameterCount > 1 && (
+                              <div>
+                                <Label>Parametre 2</Label>
+                                <Input
+                                  value={newRule.param2}
+                                  onChange={(e) => setNewRule({ ...newRule, param2: e.target.value })}
+                                  placeholder="Gerekli"
+                                />
+                              </div>
+                            )}
+                            <div>
+                              <Label>Sıra (Sequence Value)</Label>
+                              <Input
+                                value={newRule.sequenceValue}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setNewRule({
+                                    ...newRule,
+                                    sequenceValue: value,
+                                  });
+                                }}
+                                step="1"
+                                placeholder="Sıra değeri giriniz"
+                              />
+                            </div>
+                            <div className="p-4 bg-gray-50 rounded-lg">
+                              <h4 className="font-medium mb-2">Kural Açıklaması:</h4>
+                              <p className="text-sm whitespace-pre-line">{selectedRuleType.description}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">Kural Açıklaması:</h4>
-                        <p className="text-sm whitespace-pre-line">{selectedRuleType.description}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </FeedbackDialog>
+                    </FeedbackDialog>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="border rounded-lg overflow-hidden">
@@ -482,27 +520,62 @@ export default function RulesPage() {
                     .sort((a, b) => (a.sequenceValue || 0) - (b.sequenceValue || 0))
                     .map((rule) => {
                       const ruleType = ruleTypes.find((t) => t.enumVal === rule.type) || {}
+                      const editingRule = editingRules.find(r => r.id === rule.id)
                       return (
                         <TableRow key={rule.id}>
-                          <TableCell>{rule.sequenceValue}</TableCell>
+                          <TableCell>
+                            {editRuleSet ? (
+                              <Input
+                                type="number"
+                                value={editingRule?.sequenceValue || ""}
+                                onChange={(e) => handleRuleFieldUpdate(rule.id, 'sequenceValue', e.target.value)}
+                                className="w-20"
+                              />
+                            ) : (
+                              rule.sequenceValue
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="font-medium">{rule.name}</div>
                             <div className="text-sm text-gray-500">{rule.description}</div>
                           </TableCell>
                           <TableCell>{ruleType.name || rule.type}</TableCell>
                           <TableCell>
-                            {rule.param1 && <div>Param1: {rule.param1}</div>}
-                            {rule.param2 && <div>Param2: {rule.param2}</div>}
+                            {editRuleSet ? (
+                              <div className="space-y-2">
+                                {rule.param1 !== undefined && (
+                                  <Input
+                                    value={editingRule?.param1 || ""}
+                                    onChange={(e) => handleRuleFieldUpdate(rule.id, 'param1', e.target.value)}
+                                    placeholder="Parametre 1"
+                                  />
+                                )}
+                                {rule.param2 !== undefined && (
+                                  <Input
+                                    value={editingRule?.param2 || ""}
+                                    onChange={(e) => handleRuleFieldUpdate(rule.id, 'param2', e.target.value)}
+                                    placeholder="Parametre 2"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <>
+                                {rule.param1 && <div>Param1: {rule.param1}</div>}
+                                {rule.param2 && <div>Param2: {rule.param2}</div>}
+                              </>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteRule(rule.id)}
-                              disabled={loading}
-                            >
-                              Sil
-                            </Button>
+                            {!editRuleSet && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteRule(rule.id)}
+                                disabled={loading}
+                              >
+                                Sil
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       )
@@ -513,88 +586,6 @@ export default function RulesPage() {
           </div>
         )}
       </div>
-
-      {/* Edit RuleSet Dialog */}
-      <Dialog open={!!editRuleSet} onOpenChange={(open) => !open && setEditRuleSet(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Kural Seti Düzenle</DialogTitle>
-          </DialogHeader>
-          {editRuleSet && (
-            <div className="space-y-4">
-              <div>
-                <Label>Ad</Label>
-                <Input
-                  value={editRuleSet.name}
-                  onChange={(e) => setEditRuleSet((prev) => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Açıklama</Label>
-                <Input
-                  value={editRuleSet.description}
-                  onChange={(e) => setEditRuleSet((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              <div>
-                <Label>Kural Sıralamaları</Label>
-                <div className="space-y-4 mt-2">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={sequenceInput.ruleId}
-                      onChange={(e) => setSequenceInput(prev => ({ ...prev, ruleId: e.target.value }))}
-                      placeholder="Kural ID"
-                      className="w-1/2"
-                    />
-                    <Input
-                      type="number"
-                      value={sequenceInput.value}
-                      onChange={(e) => setSequenceInput(prev => ({ ...prev, value: e.target.value }))}
-                      placeholder="Sıra değeri"
-                      className="w-1/2"
-                    />
-                    <Button 
-                      onClick={handleSequenceValueChange}
-                      disabled={!sequenceInput.ruleId || sequenceInput.value === ""}
-                    >
-                      Ekle
-                    </Button>
-                  </div>
-                  <div className="border rounded-lg p-2">
-                    <div className="text-sm font-medium mb-2">Mevcut Sıralamalar:</div>
-                    {Object.entries(editRuleSet.sequenceList).map(([ruleId, value]) => (
-                      <div key={ruleId} className="flex justify-between items-center py-1">
-                        <span className="text-sm">Kural {ruleId}: {value}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditRuleSet(prev => {
-                              const newSequenceList = { ...prev.sequenceList }
-                              delete newSequenceList[ruleId]
-                              return { ...prev, sequenceList: newSequenceList }
-                            })
-                          }}
-                        >
-                          Sil
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditRuleSet(null)}>
-              İptal
-            </Button>
-            <Button onClick={handleUpdateRuleSet}>
-              Kaydet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   )
 }
