@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // useEffect'i ekledik
 import { uploadExcel } from "../lib/api"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -39,6 +39,32 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     deviceMerged: 2,
     deviceProduct: 4,
   })
+
+  // Pano kodu veya etiket tipi değiştiğinde liste adını otomatik güncelle
+  useEffect(() => {
+    if (!panoCode) return
+    
+    let typeName = ""
+    switch (formValues.type) {
+      case 1:
+        typeName = "AderBMK"
+        break
+      case 2:
+        typeName = "KlemensBMK"
+        break
+      case 3:
+        typeName = "DeviceBMK"
+        break
+      default:
+        typeName = ""
+    }
+    
+    const newListName = `${panoCode}_${typeName}`
+    setFormValues(prev => ({
+      ...prev,
+      listName: newListName
+    }))
+  }, [panoCode, formValues.type])
 
   // Handle file selection and read sheet names
   const handleFileChange = async (e) => {
@@ -149,8 +175,6 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
     }
   }
 
-
-
   // Handle form submission
   const handleSubmit = async () => {
     // Basic validation
@@ -180,7 +204,7 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
       setFile(null)
       setFormValues((prev) => ({
         ...prev,
-        listName: "",
+        listName: `${panoCode}_${getTypeName(formValues.type)}`, // Reset sırasında da otomatik ad oluştur
         sheetName: "",
       }))
 
@@ -191,6 +215,16 @@ const UploadForm = ({ customerCode, projectCode, panoCode }) => {
       handleError(error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Etiket tipine göre isim döndürür
+  const getTypeName = (type) => {
+    switch (type) {
+      case 1: return "AderBMK"
+      case 2: return "KlemensBMK"
+      case 3: return "DeviceBMK"
+      default: return ""
     }
   }
 

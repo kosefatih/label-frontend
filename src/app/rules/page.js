@@ -19,6 +19,7 @@ import { showFeedback } from "@/lib/feedback"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { useRouter } from "next/navigation" // Add this import
 
 export default function RulesPage() {
   const [ruleSets, setRuleSets] = useState([])
@@ -43,6 +44,7 @@ export default function RulesPage() {
   })
   const [selectedRuleType, setSelectedRuleType] = useState(null)
   const [sequenceInput, setSequenceInput] = useState({ ruleId: "", value: "" })
+  const router = useRouter() // Initialize the router
 
   // Load rule sets
   const loadRuleSets = async () => {
@@ -302,6 +304,17 @@ export default function RulesPage() {
 
   return (
     <AppLayout title="Kural Yönetimi">
+      {/* Back Button */}
+      <div className="mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push('/')}
+          disabled={loading}
+        >
+          Geri
+        </Button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Rule Sets Section */}
         <div className="space-y-4">
