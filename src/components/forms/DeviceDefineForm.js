@@ -1,7 +1,14 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Info } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const CATEGORY_OPTIONS = [
+  { value: "Pano", label: "Pano Etiketi" },
+  { value: "Device", label: "Cihaz Etiketi" }
+];
 
 export default function DeviceDefineForm({
   deviceDefines,
@@ -16,7 +23,19 @@ export default function DeviceDefineForm({
         <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
           <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Eplan ID</Label>
+              <div className="flex items-center gap-1">
+                <Label>Eplan ID</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>"/" karakteri otomatik olarak "_" karakterine dönüştürülür</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id={`eplanId-${index}`}
                 value={define.eplanId}
@@ -27,11 +46,21 @@ export default function DeviceDefineForm({
             </div>
             <div className="space-y-1">
               <Label>Kategori</Label>
-              <Input
+              <Select
                 value={define.category}
-                onChange={(e) => handleDeviceDefineChange(index, "category", e.target.value)}
-                className="w-full h-10"
-              />
+                onValueChange={(value) => handleDeviceDefineChange(index, "category", value)}
+              >
+                <SelectTrigger className="w-full h-10">
+                  <SelectValue placeholder="Kategori seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-3">

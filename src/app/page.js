@@ -104,11 +104,16 @@ export default function Home() {
       producerCode: "",
     },
   ])
+  const CATEGORY_OPTIONS = [
+    { value: "Pano", label: "Pano Etiketi" },
+    { value: "Device", label: "Cihaz Etiketi" }
+  ];
   const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false)
   const [repeatCount, setRepeatCount] = useState(1)
   const [exportType, setExportType] = useState("HeadEnd")
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [previewData, setPreviewData] = useState(null)
+  const [categoryNotDefinedProducts, setCategoryNotDefinedProducts] = useState(null)
 
   const handleOpenExportDialog = (listName, labelType, applyedListName) => {
     setCurrentExportItem({ listName, labelType, applyedListName })
@@ -161,25 +166,24 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
 };
 
   const handleDeviceDefineChange = (index, field, value) => {
-    // Eğer field 'eplanId' ise ve '/' içeriyorsa hata ayarla
-    if (field === "eplanId" && value.includes("/")) {
-      setErrors((prev) => ({
-        ...prev,
-        [index]: "Eplan ID'de '/' karakteri kullanılamaz",
-      }))
-    } else {
-      // Hata yoksa hata mesajını temizle
-      setErrors((prev) => {
-        const newErrors = { ...prev }
-        delete newErrors[index]
-        return newErrors
-      })
+    // Eğer field 'eplanId' ise ve '/' içeriyorsa, otomatik olarak '_' ile değiştir
+    if (field === "eplanId") {
+      value = value.replace(/\//g, "_");
     }
 
     // State'i güncelle
-    const updatedDefines = [...deviceDefines]
-    updatedDefines[index][field] = value
-    setDeviceDefines(updatedDefines)
+    const updatedDefines = [...deviceDefines];
+    updatedDefines[index][field] = value;
+    setDeviceDefines(updatedDefines);
+
+    // Hata varsa temizle
+    if (errors[index]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[index];
+        return newErrors;
+      });
+    }
   }
 
   const addNewDeviceDefineRow = () => {
@@ -272,30 +276,56 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
   }
 
   const parseLabelError = (error) => {
-    if (!error.response?.data) return null
+    if (!error.response?.data) return null;
 
     try {
-      // Response'un string olma durumuna karşı kontrol
-      const errorData = typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+      const errorData = typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data;
+      console.log('Error data:', errorData);
 
-      const errorParts = errorData.Message.split("&-&")
+      const errorParts = errorData.Message.split("&-&");
+      console.log('Error parts:', errorParts);
 
-      return {
+      // Extract product codes from the last part
+      let productList = [];
+      if (errorParts[3]) {
+        const productCodesPart = errorParts[3].replace("List of devices without defined category(s):-ProductCodes:-", "");
+        productList = productCodesPart.split("\n").filter(p => p.trim());
+        console.log('Product list:', productList);
+      }
+
+      const parsedError = {
         status: errorData.Status,
         mainMessage: errorParts[0].trim(),
-        module: errorParts[1]?.replace("Hatanın oluştuğu modül:", "").trim(),
-        repository: errorParts[2]?.replace("İstek gönderilen repository:", "").trim(),
+        module: errorParts[1]?.replace("The module where the error occurred:", "").trim(),
+        repository: errorParts[2]?.replace("The repository to which the request was sent:", "").trim(),
         exceptionType: errorData.Data,
-        products: errorParts[3]
-          ?.replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
-          .split("\n")
-          .filter((p) => p.trim()),
+        products: productList
+      };
+
+      // If this is a CategoryNotDefinedException, set the products in state
+      if (parsedError.exceptionType === "CategoryNotDefinedException" && parsedError.products.length > 0) {
+        const parsedProducts = parsedError.products.map(productCode => {
+          const parts = productCode.split('/');
+          if (parts.length === 4) {
+            return {
+              eplanId: parts[0],
+              producerName: parts[1],
+              producerCode: parts[2].split('.')[0],
+              productNumber: parts[2],
+              orderNumber: parts[3]
+            };
+          }
+          return null;
+        }).filter(Boolean);
+        setCategoryNotDefinedProducts(parsedProducts);
       }
+
+      return parsedError;
     } catch (e) {
-      console.error("Error parsing error response:", e)
-      return null
+      console.error("Error parsing error response:", e);
+      return null;
     }
-  }
+  };
 
   const handleExportWithSettings = async (repeatCount) => {
     if (!currentExportItem) return
@@ -424,27 +454,14 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
 
       if (error.response?.data) {
         try {
-          const errorData =
-            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+          const errorData = parseLabelError(error)
 
-          const messageParts = errorData.Message?.split("&-&") || []
-
-          errorDetails = {
-            status: errorData.Status || error.response.status,
-            mainMessage: messageParts[0]?.trim() || errorData.Message,
-            module: messageParts[1]?.replace("Hatanın oluştuğu modül:", "").trim(),
-            repository: messageParts[2]?.replace("İstek gönderilen repository:", "").trim(),
-            exceptionType: errorData.Data,
-          }
-
-          if (messageParts[3]) {
-            productList = messageParts[3]
-              .replace("Kategorisi(leri) tanımlı olmayan cihaz listesi:-ProductCodes:-", "")
-              .split("\n")
-              .filter((p) => p.trim())
-          }
-
+          errorDetails = errorData
           errorMessage = errorDetails.mainMessage
+
+          if (errorData.products) {
+            productList = errorData.products
+          }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
@@ -458,6 +475,7 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           ...errorDetails,
           technicalMessage: `Modül: ${errorDetails?.module || "Bilinmiyor"}\nRepository: ${errorDetails?.repository || "Bilinmiyor"}`,
         },
+        onOpenDeviceDefine: handleOpenDeviceDefine
       })
     } finally {
       setLoading(false)
@@ -476,26 +494,14 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
 
       if (error.response?.data) {
         try {
-          const errorData =
-            typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data
+          const errorData = parseLabelError(error)
 
-          const messageParts = errorData.Message?.split("&-&") || []
-
-          errorDetails = {
-            status: errorData.Status || error.response.status,
-            mainMessage: messageParts[0]?.trim() || errorData.Message,
-            module: messageParts[1]
-              ?.replace("Hatanın oluştuğu modül:", "")
-              .replace("The module where the error occurred:", "")
-              .trim(),
-            repository: messageParts[2]
-              ?.replace("İstek gönderilen repository:", "")
-              .replace("The repository to which the request was sent:", "")
-              .trim(),
-            exceptionType: errorData.Data,
-          }
-
+          errorDetails = errorData
           errorMessage = errorDetails.mainMessage
+
+          if (errorData.products) {
+            productList = errorData.products
+          }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
@@ -692,8 +698,58 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     loadRuleSets()
   }, [])
 
+  const handleOpenDeviceDefine = (parsedProducts) => {
+    console.log('Opening device define with products:', parsedProducts);
+    // Convert parsed products to device defines format
+    const newDeviceDefines = parsedProducts.map(product => ({
+      eplanId: product.eplanId,
+      category: "", // Empty category for user to select
+      productNumber: product.productNumber,
+      orderNumber: product.orderNumber,
+      producerName: product.producerName,
+      producerCode: product.producerCode,
+    }));
+    
+    setDeviceDefines(newDeviceDefines);
+    setShowDeviceDefineDialog(true);
+    // Clear the category not defined products after opening the dialog
+    setCategoryNotDefinedProducts(null);
+  };
+
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
+      {/* Category Not Defined Products Alert */}
+      {categoryNotDefinedProducts && (
+        <div className="mb-4 p-4 border rounded-lg bg-yellow-50">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-medium text-yellow-800">Kategorisi Tanımlı Olmayan Ürünler</h3>
+              <p className="mt-1 text-sm text-yellow-700">
+                {categoryNotDefinedProducts.length} adet ürünün kategorisi tanımlı değil.
+              </p>
+              <div className="mt-2 max-h-40 overflow-y-auto">
+                <ul className="space-y-1 text-sm">
+                  {categoryNotDefinedProducts.map((product, index) => (
+                    <li key={index} className="py-1 border-b last:border-b-0">
+                      {index + 1}. {product.eplanId} - {product.producerName} ({product.producerCode})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleOpenDeviceDefine(categoryNotDefinedProducts)}
+              className="flex items-center gap-1 ml-4"
+            >
+              <Plus className="h-4 w-4" />
+              Cihaz Tanımla
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Button variant="outline" className="mb-4" onClick={() => setShowDeviceDefineDialog(true)}>
         Cihaz Tanımları Ekle
       </Button>
@@ -1621,11 +1677,21 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                   </div>
                   <div className="space-y-1">
                     <Label>Kategori</Label>
-                    <Input
+                    <Select
                       value={define.category}
-                      onChange={(e) => handleDeviceDefineChange(index, "category", e.target.value)}
-                      className="w-full h-10"
-                    />
+                      onValueChange={(value) => handleDeviceDefineChange(index, "category", value)}
+                    >
+                      <SelectTrigger className="w-full h-10">
+                        <SelectValue placeholder="Kategori seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

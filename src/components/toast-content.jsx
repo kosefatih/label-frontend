@@ -25,7 +25,7 @@ export function ToastContent({ type, message, products, errorDetails }) {
             <p className="text-sm mt-1 text-gray-600">{errorDetails.technicalMessage}</p>
           )}
           
-          {products?.length > 0 && (
+          {products?.length > 0 && errorDetails?.exceptionType !== "CategoryNotDefinedException" && (
             <div className="mt-3">
               <p className="text-sm font-medium">Geçersiz Ürünler ({products.length} adet):</p>
               <div className="max-h-40 overflow-y-auto mt-1 text-sm border rounded p-2 bg-gray-50">
