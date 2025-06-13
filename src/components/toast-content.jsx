@@ -7,7 +7,7 @@ const iconMap = {
   info: Info
 }
 
-export function ToastContent({ type, message, products, errorDetails }) {
+export function ToastContent({ type, message, errorDetails }) {
   const Icon = iconMap[type] || Info
   
   return (
@@ -23,21 +23,6 @@ export function ToastContent({ type, message, products, errorDetails }) {
           
           {errorDetails?.technicalMessage && (
             <p className="text-sm mt-1 text-gray-600">{errorDetails.technicalMessage}</p>
-          )}
-          
-          {products?.length > 0 && errorDetails?.exceptionType !== "CategoryNotDefinedException" && (
-            <div className="mt-3">
-              <p className="text-sm font-medium">Geçersiz Ürünler ({products.length} adet):</p>
-              <div className="max-h-40 overflow-y-auto mt-1 text-sm border rounded p-2 bg-gray-50">
-                <ul className="space-y-1">
-                  {products.map((product, index) => (
-                    <li key={index} className="py-1 border-b last:border-b-0">
-                      {index + 1}. {product}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
           )}
         </div>
       </div>

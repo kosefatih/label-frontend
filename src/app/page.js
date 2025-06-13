@@ -19,7 +19,7 @@ import {
   getLabelList,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
-import { Plus, Trash2, FilePlus, List, Eye } from "lucide-react"
+import { Plus, Trash2, FilePlus, List, Eye, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -106,14 +106,29 @@ export default function Home() {
   ])
   const CATEGORY_OPTIONS = [
     { value: "Pano", label: "Pano Etiketi" },
-    { value: "Device", label: "Cihaz Etiketi" }
+    { value: "Device", label: "Cihaz Etiketi" },
+    { value: "EtiketlenmeyenAksesuar", label: "Etiketlenmeyen Aksesuar" },
+    { value: "RayEtiketi", label: "Ray Etiketi" },
+    { value: "ABBKontaktor", label: "ABB Kontaktör" },
+    { value: "ABBMKP", label: "ABB Motor Koruma" },
+    { value: "ButonEtiketi27x27", label: "Buton Etiketi 27x27 mm" },
+    { value: "KanalEtiketi", label: "Kanal Etiketi" },
+    { value: "PhoenixContactModul", label: "Phoneix Contact Modül" },
+    { value: "SiemensKontaktor", label: "Siemens Kontaktör" },
+    { value: "SchneiderKontaktor", label: "Schneider Kontaktör" },
+    { value: "ButonEtiketi30x40", label: "Buton Etiketi 30x40 mm" },
+    { value: "ButonEtiketi30x50", label: "Buton Etiketi 30x50 mm" },
+    { value: "SiemensMKP", label: "Siemens Motor Koruma" },
+    { value: "ButonEtiketi12_5x27", label: "Buton Etiketi 12,5x27 mm" },
   ];
+  
   const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false)
   const [repeatCount, setRepeatCount] = useState(1)
   const [exportType, setExportType] = useState("HeadEnd")
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [previewData, setPreviewData] = useState(null)
   const [categoryNotDefinedProducts, setCategoryNotDefinedProducts] = useState(null)
+  const [invalidProducts, setInvalidProducts] = useState(null);
 
   const handleOpenExportDialog = (listName, labelType, applyedListName) => {
     setCurrentExportItem({ listName, labelType, applyedListName })
@@ -318,6 +333,9 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           return null;
         }).filter(Boolean);
         setCategoryNotDefinedProducts(parsedProducts);
+      } else if (parsedError.products.length > 0) {
+        // For other types of errors with products
+        setInvalidProducts(parsedError.products);
       }
 
       return parsedError;
@@ -716,6 +734,11 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     setCategoryNotDefinedProducts(null);
   };
 
+  // Add function to clear invalid products
+  const clearInvalidProducts = () => {
+    setInvalidProducts(null);
+  };
+
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
       {/* Category Not Defined Products Alert */}
@@ -745,6 +768,38 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
             >
               <Plus className="h-4 w-4" />
               Cihaz Tanımla
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Invalid Products Alert */}
+      {invalidProducts && (
+        <div className="mb-4 p-4 border rounded-lg bg-red-50">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-medium text-red-800">Geçersiz Ürünler</h3>
+              <p className="mt-1 text-sm text-red-700">
+                {invalidProducts.length} adet geçersiz ürün tespit edildi.
+              </p>
+              <div className="mt-2 max-h-40 overflow-y-auto">
+                <ul className="space-y-1 text-sm">
+                  {invalidProducts.map((product, index) => (
+                    <li key={index} className="py-1 border-b last:border-b-0">
+                      {index + 1}. {product}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={clearInvalidProducts}
+              className="flex items-center gap-1 ml-4"
+            >
+              <X className="h-4 w-4" />
+              Kapat
             </Button>
           </div>
         </div>
