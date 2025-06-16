@@ -286,3 +286,21 @@ export const deleteLabelList = async (customerCode, projectCode, panoCode, listN
   );
   return res.data;
 };
+
+export const importDeviceDefines = async (file, columnInfo) => {
+  const formData = new FormData();
+  formData.append('File1', file);
+  formData.append('ColumnInfo', JSON.stringify(columnInfo));
+
+  const res = await axios.post(
+    `${API_URL}/settings/label_manipulation_module/params/device_defines/import`,
+    formData,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    }
+  );
+  return res.data;
+};

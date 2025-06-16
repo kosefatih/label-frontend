@@ -17,6 +17,7 @@ import {
   deleteLabelList,
   getManipulatedLabelsbyId,
   getLabelList,
+  importDeviceDefines,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
 import { Plus, Trash2, FilePlus, List, Eye, X } from "lucide-react"
@@ -123,6 +124,18 @@ export default function Home() {
   ];
   
   const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false)
+  const [showExcelImportDialog, setShowExcelImportDialog] = useState(false)
+  const [excelFile, setExcelFile] = useState(null)
+  const [columnInfo, setColumnInfo] = useState({
+    sheetName: "Kategori",
+    startRowIndex: 1,
+    EplanIdColumnNo: 0,
+    categoryColumnNo: 4,
+    productNumberColumnNo: 1,
+    orderNumberColumnNo: 3,
+    producerNameColumnNo: 5,
+    producerCodeColumnNo: 6
+  })
   const [repeatCount, setRepeatCount] = useState(1)
   const [exportType, setExportType] = useState("HeadEnd")
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
@@ -738,6 +751,25 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
   const clearInvalidProducts = () => {
     setInvalidProducts(null);
   };
+
+  const handleExcelImport = async () => {
+    if (!excelFile) {
+      showFeedback("warning", "Lütfen bir Excel dosyası seçin", { operation: "Excel import" })
+      return
+    }
+
+    try {
+      setLoading(true)
+      await importDeviceDefines(excelFile, columnInfo)
+      showFeedback("success", "Cihaz tanımları başarıyla içe aktarıldı", { operation: "Excel import" })
+      setShowExcelImportDialog(false)
+      setExcelFile(null)
+    } catch (error) {
+      showFeedback("error", error.response?.data?.message || error.message, { operation: "Excel import" })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
@@ -1715,6 +1747,20 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExcelImportDialog(true)
+                setShowDeviceDefineDialog(false)
+              }}
+              className="flex items-center gap-2"
+            >
+              <FilePlus className="h-4 w-4" />
+              Excel ile İçe Aktar
+            </Button>
+          </div>
+
           <div className="space-y-4 max-h-[70vh] overflow-y-auto p-2">
             {deviceDefines.map((define, index) => (
               <div key={index} className="grid grid-cols-3 gap-4 p-4 border rounded-lg">
@@ -1825,6 +1871,127 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Excel Import Dialog */}
+      <Dialog open={showExcelImportDialog} onOpenChange={setShowExcelImportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Excel ile Cihaz Tanımları İçe Aktar</DialogTitle>
+            <DialogDescription>
+              Excel dosyasından cihaz tanımlarını içe aktarabilirsiniz.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Excel Dosyası</Label>
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => setExcelFile(e.target.files[0])}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Sayfa Adı</Label>
+              <Input
+                value={columnInfo.sheetName}
+                onChange={(e) => setColumnInfo({ ...columnInfo, sheetName: e.target.value })}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Başlangıç Satırı</Label>
+              <Input
+                type="number"
+                value={columnInfo.startRowIndex}
+                onChange={(e) => setColumnInfo({ ...columnInfo, startRowIndex: parseInt(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Eplan ID Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.EplanIdColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, EplanIdColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kategori Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.categoryColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, categoryColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ürün Numarası Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.productNumberColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, productNumberColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sipariş Numarası Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.orderNumberColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, orderNumberColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Üretici Adı Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.producerNameColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, producerNameColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Üretici Kodu Sütunu</Label>
+                <Input
+                  type="number"
+                  value={columnInfo.producerCodeColumnNo}
+                  onChange={(e) => setColumnInfo({ ...columnInfo, producerCodeColumnNo: parseInt(e.target.value) })}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowExcelImportDialog(false)
+                setShowDeviceDefineDialog(true)
+              }}
+            >
+              Geri Dön
+            </Button>
+            <LoadingButton isLoading={loading} onClick={handleExcelImport}>
+              İçe Aktar
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {previewData && (
         <ManipulatedLabelsPreview
           customerName={previewData.customerName}
