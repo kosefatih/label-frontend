@@ -186,10 +186,6 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
       value = value.replace(/\//g, "_");
     }
 
-    // Eğer kategori ise, sadece '/' öncesini kaydet
-    if (field === "category") {
-      value = value.split("/")[0].trim();
-    }
     // State'i güncelle
     const updatedDefines = [...deviceDefines];
     updatedDefines[index][field] = value;
@@ -266,7 +262,12 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     // 3. Validasyon başarılıysa API isteğini yap
     try {
       setLoading(true)
-      await createMultipleDeviceDefines(deviceDefines)
+      // Kategori alanını sadece '/' öncesiyle gönder
+      const definesToSend = deviceDefines.map((define) => ({
+        ...define,
+        category: define.category ? define.category.split("/")[0].trim() : ""
+      }));
+      await createMultipleDeviceDefines(definesToSend)
 
       // 4. Başarılı durumda formu resetle
       showFeedback("success", "Cihaz tanımları başarıyla eklendi", {
