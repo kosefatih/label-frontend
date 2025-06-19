@@ -18,6 +18,7 @@ import {
   getManipulatedLabelsbyId,
   getLabelList,
   importDeviceDefines,
+  getDeviceLabelCategories,
 } from "../lib/api"
 import UploadForm from "../components/upload-form"
 import { Plus, Trash2, FilePlus, List, Eye, X } from "lucide-react"
@@ -105,24 +106,10 @@ export default function Home() {
       producerCode: "",
     },
   ])
-  const CATEGORY_OPTIONS = [
-    { value: "Pano", label: "Pano Etiketi" },
-    { value: "Device", label: "Cihaz Etiketi" },
-    { value: "EtiketlenmeyenAksesuar", label: "Etiketlenmeyen Aksesuar" },
-    { value: "RayEtiketi", label: "Ray Etiketi" },
-    { value: "ABBKontaktor", label: "ABB Kontaktör" },
-    { value: "ABBMKP", label: "ABB Motor Koruma" },
-    { value: "ButonEtiketi27x27", label: "Buton Etiketi 27x27 mm" },
-    { value: "KanalEtiketi", label: "Kanal Etiketi" },
-    { value: "PhoenixContactModul", label: "Phoneix Contact Modül" },
-    { value: "SiemensKontaktor", label: "Siemens Kontaktör" },
-    { value: "SchneiderKontaktor", label: "Schneider Kontaktör" },
-    { value: "ButonEtiketi30x40", label: "Buton Etiketi 30x40 mm" },
-    { value: "ButonEtiketi30x50", label: "Buton Etiketi 30x50 mm" },
-    { value: "SiemensMKP", label: "Siemens Motor Koruma" },
-    { value: "ButonEtiketi12_5x27", label: "Buton Etiketi 12,5x27 mm" },
-  ];
-  
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState(null);
+
   const [showDeviceDefineDialog, setShowDeviceDefineDialog] = useState(false)
   const [showExcelImportDialog, setShowExcelImportDialog] = useState(false)
   const [excelFile, setExcelFile] = useState(null)
@@ -199,6 +186,10 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
       value = value.replace(/\//g, "_");
     }
 
+    // Eğer kategori ise, sadece '/' öncesini kaydet
+    if (field === "category") {
+      value = value.split("/")[0].trim();
+    }
     // State'i güncelle
     const updatedDefines = [...deviceDefines];
     updatedDefines[index][field] = value;
@@ -771,6 +762,23 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     }
   }
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoryLoading(true);
+      setCategoryError(null);
+      try {
+        const data = await getDeviceLabelCategories();
+        setCategoryOptions(data);
+      } catch (err) {
+        setCategoryError("Kategoriler yüklenemedi");
+      } finally {
+        setCategoryLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   return (
     <AppLayout title="Etiket Manipülasyon Programı">
       {/* Category Not Defined Products Alert */}
@@ -1227,7 +1235,6 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                                             </p>
                                           </div>
                                           <div className="flex gap-2">
-                                            {/* Sadece AderBMK tipi için önizleme butonunu göster */}
                                             {list.labelType === "AderBMK" && (
                                               <Button
                                                 size="sm"
@@ -1781,14 +1788,15 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
                     <Select
                       value={define.category}
                       onValueChange={(value) => handleDeviceDefineChange(index, "category", value)}
+                      disabled={categoryLoading || categoryError}
                     >
                       <SelectTrigger className="w-full h-10">
-                        <SelectValue placeholder="Kategori seçin" />
+                        <SelectValue placeholder={categoryLoading ? "Yükleniyor..." : categoryError ? categoryError : "Kategori seçin"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {CATEGORY_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                        {categoryOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
                           </SelectItem>
                         ))}
                       </SelectContent>

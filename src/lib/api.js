@@ -304,3 +304,15 @@ export const importDeviceDefines = async (file, columnInfo) => {
   );
   return res.data;
 };
+
+export const getDeviceLabelCategories = async () => {
+  const res = await axios.get(
+    `${API_URL}/settings/label_manipulation_module/params/device_label_types/categories`,
+    {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    }
+  );
+  return res.data.data;
+};
