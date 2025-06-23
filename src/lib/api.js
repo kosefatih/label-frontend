@@ -316,3 +316,33 @@ export const getDeviceLabelCategories = async () => {
   );
   return res.data.data;
 };
+
+// Müşteri silme
+export const deleteCustomer = async (customerCode) => {
+  const res = await axios.delete(`${API_URL}/customers/${customerCode}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  return res.data;
+};
+
+// Proje silme
+export const deleteProject = async (customerCode, projectCode) => {
+  const res = await axios.delete(`${API_URL}/customers/${customerCode}/projects/${projectCode}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  return res.data;
+};
+
+// Pano silme
+export const deletePano = async (customerCode, projectCode, panoCode) => {
+  const res = await axios.delete(`${API_URL}/customers/${customerCode}/projects/${projectCode}/panos/${panoCode}`, {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  });
+  return res.data;
+};

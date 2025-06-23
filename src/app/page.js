@@ -4,10 +4,13 @@ import Link from "next/link"
 import {
   getCustomers,
   createCustomer,
+  deleteCustomer,
   getProjects,
   createProject,
+  deleteProject,
   getPanos,
   createPano,
+  deletePano,
   getLabels,
   getRuleSets,
   applyRuleToLabel,
@@ -349,6 +352,50 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
       return null;
     }
   };
+
+  // Müşteri silme
+const handleDeleteCustomer = async (customerCode) => {
+  try {
+    setLoading(true);
+    await deleteCustomer(customerCode);
+    showFeedback("success", "Müşteri başarıyla silindi", { operation: "Müşteri silme" });
+    await loadCustomers(); // Listeyi yenile
+  } catch (error) {
+    showFeedback("error", error.response?.data?.message || error.message, { operation: "Müşteri silme" });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Proje silme
+const handleDeleteProject = async (projectCode) => {
+  if (!selectedCustomer) return;
+  try {
+    setLoading(true);
+    await deleteProject(selectedCustomer.code, projectCode);
+    showFeedback("success", "Proje başarıyla silindi", { operation: "Proje silme" });
+    await loadProjects(selectedCustomer); // Listeyi yenile
+  } catch (error) {
+    showFeedback("error", error.response?.data?.message || error.message, { operation: "Proje silme" });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Pano silme
+const handleDeletePano = async (panoCode) => {
+  if (!selectedCustomer || !selectedProject) return;
+  try {
+    setLoading(true);
+    await deletePano(selectedCustomer.code, selectedProject.code, panoCode);
+    showFeedback("success", "Pano başarıyla silindi", { operation: "Pano silme" });
+    await loadPanos(selectedProject); // Listeyi yenile
+  } catch (error) {
+    showFeedback("error", error.response?.data?.message || error.message, { operation: "Pano silme" });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleExportWithSettings = async (repeatCount) => {
     if (!currentExportItem) return
@@ -881,12 +928,38 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           </LoadingButton>
           <div className="space-y-2">
             {customers.map((customer) => (
-              <UIListItem
-                key={customer.id}
-                title={`${customer.name} (${customer.code})`}
-                isSelected={selectedCustomer?.id === customer.id}
-                onClick={() => loadProjects(customer)}
-              />
+              <div key={customer.id} className="flex items-center justify-between group">
+                <UIListItem
+                  title={`${customer.name} (${customer.code})`}
+                  isSelected={selectedCustomer?.id === customer.id}
+                  onClick={() => loadProjects(customer)}
+                  className="flex-1"
+                />
+                <FeedbackDialog
+                  title="Müşteriyi Sil"
+                  trigger={
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  }
+                  onConfirm={() => handleDeleteCustomer(customer.code)}
+                  confirmText="Sil"
+                  cancelText="Vazgeç"
+                >
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">
+                      {customer.name} müşterisini silmek üzeresiniz. Bu işlem geri alınamaz.
+                    </p>
+                    <p className="text-sm font-medium text-red-600">
+                      Bu müşteriye ait tüm projeler ve panolar da silinecek.
+                    </p>
+                  </div>
+                </FeedbackDialog>
+              </div>
             ))}
           </div>
         </UICard>
@@ -913,12 +986,38 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           {selectedCustomer && (
             <div className="space-y-2">
               {projects.map((project) => (
-                <UIListItem
-                  key={project.id}
-                  title={`${project.name} (${project.code})`}
-                  isSelected={selectedProject?.id === project.id}
-                  onClick={() => loadPanos(project)}
-                />
+                <div key={project.id} className="flex items-center justify-between group">
+                  <UIListItem
+                    title={`${project.name} (${project.code})`}
+                    isSelected={selectedProject?.id === project.id}
+                    onClick={() => loadPanos(project)}
+                    className="flex-1"
+                  />
+                  <FeedbackDialog
+                    title="Projeyi Sil"
+                    trigger={
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    }
+                    onConfirm={() => handleDeleteProject(project.code)}
+                    confirmText="Sil"
+                    cancelText="Vazgeç"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        {project.name} projesini silmek üzeresiniz. Bu işlem geri alınamaz.
+                      </p>
+                      <p className="text-sm font-medium text-red-600">
+                        Bu projeye ait tüm panolar da silinecek.
+                      </p>
+                    </div>
+                  </FeedbackDialog>
+                </div>
               ))}
             </div>
           )}
@@ -946,13 +1045,39 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
           {selectedProject && (
             <div className="space-y-2">
               {panos.map((pano) => (
-                <UIListItem
-                  key={pano.id}
-                  title={`${pano.code} (${pano.code})`}
-                  subtitle={pano.description}
-                  isSelected={selectedPano?.id === pano.id}
-                  onClick={() => loadLabels(pano)}
-                />
+                <div key={pano.id} className="flex items-center justify-between group">
+                  <UIListItem
+                    title={`${pano.code} (${pano.code})`}
+                    subtitle={pano.description}
+                    isSelected={selectedPano?.id === pano.id}
+                    onClick={() => loadLabels(pano)}
+                    className="flex-1"
+                  />
+                  <FeedbackDialog
+                    title="Panoyu Sil"
+                    trigger={
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="opacity-0 group-hover:opacity-100 h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    }
+                    onConfirm={() => handleDeletePano(pano.code)}
+                    confirmText="Sil"
+                    cancelText="Vazgeç"
+                  >
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        {pano.code} panosunu silmek üzeresiniz. Bu işlem geri alınamaz.
+                      </p>
+                      <p className="text-sm font-medium text-red-600">
+                        Bu panoya ait tüm etiket listeleri de silinecek.
+                      </p>
+                    </div>
+                  </FeedbackDialog>
+                </div>
               ))}
             </div>
           )}
