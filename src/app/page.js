@@ -443,8 +443,16 @@ const handleDeletePano = async (panoCode) => {
       setLoading(true)
       setSelectedCustomer(customer)
       setSelectedProject(null)
+      setSelectedPano(null)
+      setProjects([])
       setPanos([])
       setLabels(null)
+      setManipulatedLists([])
+      setSelectedManipulatedList(null)
+      setExportDialogOpen(false)
+      setCurrentExportItem(null)
+      setPreviewData(null)
+      setPreviewDialogOpen(false)
       const data = await getProjects(customer.code)
       setProjects(data)
       showFeedback("success", `${customer.name} müşterisinin projeleri yüklendi`, { operation: "Veri yükleme" })
@@ -1541,7 +1549,7 @@ const handleDeletePano = async (panoCode) => {
                                                   handlePreviewLabels(
                                                     group.listName,
                                                     list.labelType,
-                                                    list.applyedListName,
+                                                    list.applyedListName
                                                   )
                                                 }
                                               >
