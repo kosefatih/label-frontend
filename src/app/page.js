@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import {
   getCustomers,
@@ -132,6 +132,36 @@ export default function Home() {
   const [previewData, setPreviewData] = useState(null)
   const [categoryNotDefinedProducts, setCategoryNotDefinedProducts] = useState(null)
   const [invalidProducts, setInvalidProducts] = useState(null);
+
+  // Webhook dosya gönderimi için referans ve fonksiyonlar
+  const webhookFileInputRef = useRef(null);
+
+  const handleWebhookFileButtonClick = () => {
+    if (webhookFileInputRef.current) {
+      webhookFileInputRef.current.value = null; // Aynı dosya tekrar seçilebilsin diye
+      webhookFileInputRef.current.click();
+    }
+  };
+
+  const handleWebhookFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      setLoading(true);
+      const response = await fetch("https://groogy.app.n8n.cloud/webhook-test/8c3208b7-2bdd-4a17-aa4a-b3064428f48b", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Webhook'a dosya gönderilemedi");
+      showFeedback("success", "Dosya webhook'a başarıyla gönderildi", { operation: "Webhook dosya gönderimi" });
+    } catch (error) {
+      showFeedback("error", error.message, { operation: "Webhook dosya gönderimi" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenExportDialog = (listName, labelType, applyedListName) => {
     setCurrentExportItem({ listName, labelType, applyedListName })
@@ -904,9 +934,20 @@ const handleDeletePano = async (panoCode) => {
       <Button variant="outline" className="mb-4" onClick={() => setShowDeviceDefineDialog(true)}>
         Cihaz Tanımları Ekle
       </Button>
-      <Button variant="outline" asChild>
-        <Link href="/rules">Kurallar</Link>
-      </Button>
+      <div className="flex gap-2 mb-4">
+        <Button variant="outline" asChild>
+          <Link href="/rules">Kurallar</Link>
+        </Button>
+        <Button variant="outline" onClick={handleWebhookFileButtonClick}>
+          Webhook'a Dosya Gönder
+        </Button>
+      </div>
+      <input
+        type="file"
+        ref={webhookFileInputRef}
+        style={{ display: "none" }}
+        onChange={handleWebhookFileChange}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Müşteriler */}
