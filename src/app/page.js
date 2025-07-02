@@ -939,7 +939,7 @@ const handleDeletePano = async (panoCode) => {
           <Link href="/rules">Kurallar</Link>
         </Button>
         <Button variant="outline" onClick={handleWebhookFileButtonClick}>
-          Webhook'a Dosya Gönder
+          Webhook a Dosya Gönder
         </Button>
       </div>
       <input
