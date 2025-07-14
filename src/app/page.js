@@ -1266,7 +1266,7 @@ const handleDeletePano = async (panoCode) => {
                                       <p>Yükleniyor...</p>
                                     </div>
                                   ) : manipulatedLists.length > 0 ? (
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 max-h-72 overflow-y-auto">
                                       {manipulatedLists.map((list, index) => (
                                         <div
                                           key={index}
@@ -1449,7 +1449,7 @@ const handleDeletePano = async (panoCode) => {
                                       <p>Yükleniyor...</p>
                                     </div>
                                   ) : manipulatedLists.length > 0 ? (
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 max-h-72 overflow-y-auto">
                                       {manipulatedLists.map((list, index) => (
                                         <div
                                           key={index}
@@ -1621,7 +1621,7 @@ const handleDeletePano = async (panoCode) => {
                                       <p>Yükleniyor...</p>
                                     </div>
                                   ) : manipulatedLists.length > 0 ? (
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 max-h-72 overflow-y-auto">
                                       {manipulatedLists.map((list, index) => (
                                         <div
                                           key={index}
