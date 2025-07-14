@@ -147,15 +147,28 @@ export default function Home() {
     const file = e.target.files[0];
     if (!file) return;
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("test", file);
     try {
       setLoading(true);
-      const response = await fetch("https://groogy.app.n8n.cloud/webhook-test/8c3208b7-2bdd-4a17-aa4a-b3064428f48b", {
+      const response = await fetch("https://fatih2704.app.n8n.cloud/webhook/4ce6f6fa-707d-4cb3-aac2-571b59a6d8bb", {
         method: "POST",
         body: formData,
       });
       if (!response.ok) throw new Error("Webhook'a dosya gönderilemedi");
-      showFeedback("success", "Dosya webhook'a başarıyla gönderildi", { operation: "Webhook dosya gönderimi" });
+
+      // Binary dosya olarak indir
+      const blob = await response.blob();
+      const filename = "webhook-donusu.xlsx";
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showFeedback("success", "Dosya webhook'tan başarıyla indirildi", { operation: "Webhook dosya indirimi" });
     } catch (error) {
       showFeedback("error", error.message, { operation: "Webhook dosya gönderimi" });
     } finally {
