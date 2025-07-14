@@ -135,6 +135,8 @@ export default function Home() {
 
   // Webhook dosya gönderimi için referans ve fonksiyonlar
   const webhookFileInputRef = useRef(null);
+  const [projectInfoText, setProjectInfoText] = useState("");
+  const [showWebhookInputs, setShowWebhookInputs] = useState(false);
 
   const handleWebhookFileButtonClick = () => {
     if (webhookFileInputRef.current) {
@@ -146,19 +148,27 @@ export default function Home() {
   const handleWebhookFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+  
     const formData = new FormData();
-    formData.append("test", file);
+    formData.append("delik_dosyasi", file);
+  
+    formData.append("project_info", projectInfoText );  
+
     try {
       setLoading(true);
+  
       const response = await fetch("https://fatih2704.app.n8n.cloud/webhook/4ce6f6fa-707d-4cb3-aac2-571b59a6d8bb", {
         method: "POST",
         body: formData,
       });
+  
       if (!response.ok) throw new Error("Webhook'a dosya gönderilemedi");
-
-      // Binary dosya olarak indir
-      const blob = await response.blob();
-      const filename = "webhook-donusu.xlsx";
+  
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: "application/zip" });
+  
+      const filename = "Delik_Dosyalari.zip";
+  
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -167,10 +177,20 @@ export default function Home() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-
-      showFeedback("success", "Dosya webhook'tan başarıyla indirildi", { operation: "Webhook dosya indirimi" });
+  
+      // Başarılı bildirim
+      showFeedback("success", "Dosya webhook'tan başarıyla indirildi", {
+        operation: "Webhook dosya indirimi",
+      });
+  
+      // Formu sıfırla
+      setProjectInfoText("");
+      setShowWebhookInputs(false);
+  
     } catch (error) {
-      showFeedback("error", error.message, { operation: "Webhook dosya gönderimi" });
+      showFeedback("error", error.message, {
+        operation: "Webhook dosya gönderimi",
+      });
     } finally {
       setLoading(false);
     }
@@ -951,16 +971,35 @@ const handleDeletePano = async (panoCode) => {
         <Button variant="outline" asChild>
           <Link href="/rules">Kurallar</Link>
         </Button>
-        <Button variant="outline" onClick={handleWebhookFileButtonClick}>
-          Webhook a Dosya Gönder
-        </Button>
+        {/* Webhook için metin inputu */}
+        <div className="flex flex-col md:flex-row gap-2 mb-4 items-center">
+          <input
+            type="text"
+            placeholder="Açıklama girin"
+            value={projectInfoText}
+            onChange={e => setProjectInfoText(e.target.value)}
+            className="border rounded px-3 py-2 min-w-[200px]"
+          />
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (webhookFileInputRef.current) {
+                webhookFileInputRef.current.value = null;
+                webhookFileInputRef.current.click();
+              }
+            }}
+            disabled={!projectInfoText}
+          >
+            Excel Dosyası Seç ve Gönder
+          </Button>
+        </div>
+        <input
+          type="file"
+          ref={webhookFileInputRef}
+          style={{ display: "none" }}
+          onChange={handleWebhookFileChange}
+        />
       </div>
-      <input
-        type="file"
-        ref={webhookFileInputRef}
-        style={{ display: "none" }}
-        onChange={handleWebhookFileChange}
-      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Müşteriler */}
