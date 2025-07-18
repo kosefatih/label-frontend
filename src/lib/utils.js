@@ -43,13 +43,13 @@ export function parseLabelError(error) {
         productList = rawProducts
           .map((productCode) => {
             const parts = productCode.split("/")
-            if (parts.length === 4) {
+            if (parts.length >= 4) {
               return {
-                eplanId: parts[0],
-                producerName: parts[1],
-                producerCode: parts[2].split(".")[0], // Remove the part after the dot
-                productNumber: parts[2],
-                orderNumber: parts[3],
+                eplanId: parts[0] || "",
+                producerName: parts[1] || "",
+                producerCode: (parts[2] || "").split(".")[0], // Remove the part after the dot
+                productNumber: parts[2] || "",
+                orderNumber: parts[3] || "",
               }
             }
             return null

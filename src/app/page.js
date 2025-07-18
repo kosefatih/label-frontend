@@ -49,6 +49,7 @@ import ManipulatedLabelsPreview from "../components/manipulated-labels-preview"
 import { CustomerForm } from "../components/forms/CustomerForm"
 import { ProjectForm } from "../components/forms/ProjectForm"
 import { PanoForm } from "../components/forms/PanoForm"
+import { parseLabelError } from "../lib/utils"
 
 export default function Home() {
   const [customers, setCustomers] = useState([])
@@ -361,61 +362,6 @@ const handlePreviewLabels = async (listName, labelType, applyedListName) => {
     }
   }
 
-  const parseLabelError = (error) => {
-    if (!error.response?.data) return null;
-
-    try {
-      const errorData = typeof error.response.data === "string" ? JSON.parse(error.response.data) : error.response.data;
-      console.log('Error data:', errorData);
-
-      const errorParts = errorData.Message.split("&-&");
-      console.log('Error parts:', errorParts);
-
-      // Extract product codes from the last part
-      let productList = [];
-      if (errorParts[3]) {
-        const productCodesPart = errorParts[3].replace("List of devices without defined category(s):-ProductCodes:-", "");
-        productList = productCodesPart.split("\n").filter(p => p.trim());
-        console.log('Product list:', productList);
-      }
-
-      const parsedError = {
-        status: errorData.Status,
-        mainMessage: errorParts[0].trim(),
-        module: errorParts[1]?.replace("The module where the error occurred:", "").trim(),
-        repository: errorParts[2]?.replace("The repository to which the request was sent:", "").trim(),
-        exceptionType: errorData.Data,
-        products: productList
-      };
-
-      // If this is a CategoryNotDefinedException, set the products in state
-      if (parsedError.exceptionType === "CategoryNotDefinedException" && parsedError.products.length > 0) {
-        const parsedProducts = parsedError.products.map(productCode => {
-          const parts = productCode.split('/');
-          if (parts.length === 4) {
-            return {
-              eplanId: parts[0],
-              producerName: parts[1],
-              producerCode: parts[2].split('.')[0],
-              productNumber: parts[2],
-              orderNumber: parts[3]
-            };
-          }
-          return null;
-        }).filter(Boolean);
-        setCategoryNotDefinedProducts(parsedProducts);
-      } else if (parsedError.products.length > 0) {
-        // For other types of errors with products
-        setInvalidProducts(parsedError.products);
-      }
-
-      return parsedError;
-    } catch (e) {
-      console.error("Error parsing error response:", e);
-      return null;
-    }
-  };
-
   // Müşteri silme
 const handleDeleteCustomer = async (customerCode) => {
   try {
@@ -603,6 +549,13 @@ const handleDeletePano = async (panoCode) => {
           if (errorData.products) {
             productList = errorData.products
           }
+
+          // Kategorisi tanımlı olmayan ürünler için state'i güncelle
+          if (errorData.exceptionType === "CategoryNotDefinedException" && errorData.products.length > 0) {
+            setCategoryNotDefinedProducts(errorData.products)
+          } else if (errorData.products.length > 0) {
+            setInvalidProducts(errorData.products)
+          }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
         }
@@ -632,6 +585,7 @@ const handleDeletePano = async (panoCode) => {
     } catch (error) {
       let errorMessage = error.message
       let errorDetails = null
+      let productList = null
 
       if (error.response?.data) {
         try {
@@ -642,6 +596,13 @@ const handleDeletePano = async (panoCode) => {
 
           if (errorData.products) {
             productList = errorData.products
+          }
+
+          // Kategorisi tanımlı olmayan ürünler için state'i güncelle
+          if (errorData.exceptionType === "CategoryNotDefinedException" && errorData.products.length > 0) {
+            setCategoryNotDefinedProducts(errorData.products)
+          } else if (errorData.products.length > 0) {
+            setInvalidProducts(errorData.products)
           }
         } catch (parseError) {
           console.error("Error parsing error response:", parseError)
