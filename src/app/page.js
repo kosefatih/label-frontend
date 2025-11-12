@@ -153,24 +153,94 @@ export default function Home() {
     const formData = new FormData();
     formData.append("delik_dosyasi", file);
   
-    formData.append("project_info", projectInfoText );  
+    formData.append("project_info", JSON.stringify({Title: projectInfoText}) );  
 
     try {
       setLoading(true);
   
-      const response = await fetch("https://keremefe.app.n8n.cloud/webhook/4ce6f6fa-707d-4cb3-aac2-571b59a6d8bb", {
+      const response = await fetch("http://172.16.202.122:5875/webhook/4ce6f6fa-707d-4cb3-aac2-571b59a6d8bb", {
         method: "POST",
         body: formData,
+        headers: {
+          Accept: "application/zip, application/octet-stream",
+        },
       });
   
       if (!response.ok) throw new Error("Webhook'a dosya gönderilemedi");
   
-      const arrayBuffer = await response.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: "application/zip" });
-  
-      const filename = "Delik_Dosyalari.zip";
-  
-      const url = window.URL.createObjectURL(blob);
+      const contentDisposition = response.headers.get("content-disposition");
+      const contentType = response.headers.get("content-type") || "";
+
+      let downloadBlob;
+      let filename = "Delik_Dosyalari.zip";
+
+      // JSON yanıtı kontrolü - dosya verisi içerebilir
+      if (contentType.includes("application/json")) {
+        const json = await response.json();
+        
+        // Base64 kodlanmış dosya kontrolü
+        if (json.file || json.data || json.content) {
+          const base64Data = json.file || json.data || json.content;
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          downloadBlob = new Blob([bytes], { type: "application/zip" });
+          filename = json.filename || json.fileName || filename;
+        }
+        // Dosya URL'si kontrolü
+        else if (json.downloadUrl || json.url || json.fileUrl) {
+          const fileUrl = json.downloadUrl || json.url || json.fileUrl;
+          const fileResponse = await fetch(fileUrl);
+          if (!fileResponse.ok) throw new Error("Dosya URL'sinden indirilemedi");
+          downloadBlob = await fileResponse.blob();
+          const urlContentDisposition = fileResponse.headers.get("content-disposition");
+          if (urlContentDisposition) {
+            const fileNameMatch = urlContentDisposition.match(/filename\*?=(?:UTF-8''|")?([^\";]+)/i);
+            if (fileNameMatch?.[1]) {
+              filename = decodeURIComponent(fileNameMatch[1].replace(/"/g, ""));
+            }
+          }
+        }
+        // Binary data kontrolü (array buffer olarak)
+        else if (json.binary || json.buffer) {
+          const binaryData = json.binary || json.buffer;
+          downloadBlob = new Blob([binaryData], { type: "application/zip" });
+          filename = json.filename || json.fileName || filename;
+        }
+        // Hata mesajı varsa
+        else if (json.message || json.error) {
+          throw new Error(json.message || json.error || "Webhook'tan hata mesajı alındı");
+        }
+        // Bilinmeyen JSON formatı
+        else {
+          throw new Error(`Webhook'tan beklenmeyen JSON yanıtı: ${JSON.stringify(json)}`);
+        }
+      } else {
+        // Normal binary yanıt
+        downloadBlob = await response.blob();
+        if (!downloadBlob.type) {
+          downloadBlob = new Blob([downloadBlob], { type: contentType || "application/zip" });
+        }
+        
+        if (contentDisposition) {
+          const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^\";]+)/i);
+          if (fileNameMatch?.[1]) {
+            filename = decodeURIComponent(fileNameMatch[1].replace(/"/g, ""));
+            if (!filename.toLowerCase().endsWith(".zip")) {
+              filename = `${filename}.zip`;
+            }
+          }
+        }
+      }
+
+      // Dosya indirme
+      if (!downloadBlob) {
+        throw new Error("İndirilecek dosya bulunamadı");
+      }
+
+      const url = window.URL.createObjectURL(downloadBlob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
